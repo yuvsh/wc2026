@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(textutil -convert txt -stdout /Users/yuvsh/code/wc2026/docs/plan.md)"
+    ]
+  }
+}
