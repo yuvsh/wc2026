@@ -208,6 +208,38 @@ create or replace trigger predictions_updated_at
   for each row execute procedure update_updated_at();
 
 -- =============================================================================
+-- TABLES (continued)
+-- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- group_standings
+-- Pre-computed group stage standings. Updated by sync-schedule cron.
+-- -----------------------------------------------------------------------------
+create table if not exists group_standings (
+  id           uuid primary key default uuid_generate_v4(),
+  group_name   text not null,         -- e.g. 'A', 'B', ... 'L'
+  team_name    text not null,
+  team_code    text not null,         -- ISO 3166-1 alpha-2
+  flag_url     text,
+  position     int  not null,         -- rank within group (1-4)
+  played       int  not null default 0,
+  won          int  not null default 0,
+  drawn        int  not null default 0,
+  lost         int  not null default 0,
+  goals_for    int  not null default 0,
+  goals_against int not null default 0,
+  points       int  not null default 0,
+  qualified    boolean not null default false,
+  last_updated timestamptz,
+  unique (group_name, team_name)
+);
+
+-- RLS: public read
+alter table group_standings enable row level security;
+create policy "group_standings_read" on group_standings
+  for select using (true);
+
+-- =============================================================================
 -- VIEWS
 -- =============================================================================
 
