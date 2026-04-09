@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { isValidInviteCode } from "@/lib/utils/inviteCode";
 
 interface League {
   id: string;
@@ -52,12 +53,27 @@ export default function LeaguePage(): React.ReactElement {
 
       if (profile) setDisplayName(profile.display_name);
 
-      const { data: memberships } = await supabase
+      // Fetch memberships first, then fetch league details separately to avoid RLS join issues
+      const { data: memberRows } = await supabase
         .from("league_members")
-        .select("total_points, leagues(id, name, invite_code)")
+        .select("total_points, league_id")
         .eq("user_id", user.id);
 
-      if (memberships) setExistingLeagues(memberships as LeagueMemberRow[]);
+      if (memberRows && memberRows.length > 0) {
+        const leagueIds = memberRows.map((m) => m.league_id);
+        const { data: leagueRows } = await supabase
+          .from("leagues")
+          .select("id, name, invite_code")
+          .in("id", leagueIds);
+
+        if (leagueRows) {
+          const merged: LeagueMemberRow[] = memberRows.map((m) => ({
+            total_points: m.total_points,
+            leagues: leagueRows.find((l) => l.id === m.league_id) as League,
+          }));
+          setExistingLeagues(merged);
+        }
+      }
     }
     loadUser();
   }, []);
@@ -68,8 +84,7 @@ export default function LeaguePage(): React.ReactElement {
 
   async function handleJoin(): Promise<void> {
     const code = joinCode.trim().toUpperCase();
-    const alphanumeric = /^[A-Z0-9]{6}$/;
-    if (!alphanumeric.test(code)) {
+    if (!isValidInviteCode(code)) {
       setJoinError(true);
       return;
     }
