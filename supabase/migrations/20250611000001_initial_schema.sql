@@ -21,7 +21,7 @@ create extension if not exists "pg_net";
 -- Pre-seeded list of Revivim neighbourhoods. See seed_data.sql for values.
 -- -----------------------------------------------------------------------------
 create table if not exists neighbourhoods (
-  id            uuid primary key default uuid_generate_v4(),
+  id            uuid primary key default gen_random_uuid(),
   name          text not null unique,
   display_order int  not null default 0
 );
@@ -49,7 +49,7 @@ comment on column users.hood_locked is
 -- Top 40 Golden Boot candidates. Pre-seeded. See seed_data.sql.
 -- -----------------------------------------------------------------------------
 create table if not exists players (
-  id            uuid primary key default uuid_generate_v4(),
+  id            uuid primary key default gen_random_uuid(),
   name          text not null,
   country       text not null,
   country_code  text not null,   -- ISO 3166-1 alpha-2, e.g. 'fr'
@@ -62,7 +62,7 @@ create table if not exists players (
 -- World Cup 2026 fixtures. Populated from API-Football via sync-schedule cron.
 -- -----------------------------------------------------------------------------
 create table if not exists matches (
-  id              uuid primary key default uuid_generate_v4(),
+  id              uuid primary key default gen_random_uuid(),
   api_football_id int  unique,                -- external ID from API-Football
   team_a          text        not null,
   team_b          text        not null,
@@ -92,7 +92,7 @@ comment on column matches.score_a is
 -- Private groups identified by a 6-character invite code.
 -- -----------------------------------------------------------------------------
 create table if not exists leagues (
-  id          uuid primary key default uuid_generate_v4(),
+  id          uuid primary key default gen_random_uuid(),
   name        text        not null,
   invite_code text        not null unique,
   created_by  uuid        not null references users(id) on delete cascade,
@@ -105,7 +105,7 @@ create table if not exists leagues (
 -- total_points is denormalized for fast leaderboard queries.
 -- -----------------------------------------------------------------------------
 create table if not exists league_members (
-  id           uuid primary key default uuid_generate_v4(),
+  id           uuid primary key default gen_random_uuid(),
   league_id    uuid        not null references leagues(id) on delete cascade,
   user_id      uuid        not null references users(id) on delete cascade,
   total_points int         not null default 0,
@@ -118,7 +118,7 @@ create table if not exists league_members (
 -- One row per user per match.
 -- -----------------------------------------------------------------------------
 create table if not exists predictions (
-  id            uuid primary key default uuid_generate_v4(),
+  id            uuid primary key default gen_random_uuid(),
   user_id       uuid        not null references users(id) on delete cascade,
   match_id      uuid        not null references matches(id) on delete cascade,
   predicted_a   int         not null check (predicted_a >= 0),
@@ -135,7 +135,7 @@ create table if not exists predictions (
 -- One prediction per user, locked before the first match kicks off.
 -- -----------------------------------------------------------------------------
 create table if not exists golden_boot_predictions (
-  id             uuid primary key default uuid_generate_v4(),
+  id             uuid primary key default gen_random_uuid(),
   user_id        uuid        not null references users(id) on delete cascade unique,
   player_id      uuid        not null references players(id) on delete cascade,
   points_awarded int         not null default 0,
@@ -216,7 +216,7 @@ create or replace trigger predictions_updated_at
 -- Pre-computed group stage standings. Updated by sync-schedule cron.
 -- -----------------------------------------------------------------------------
 create table if not exists group_standings (
-  id           uuid primary key default uuid_generate_v4(),
+  id           uuid primary key default gen_random_uuid(),
   group_name   text not null,         -- e.g. 'A', 'B', ... 'L'
   team_name    text not null,
   team_code    text not null,         -- ISO 3166-1 alpha-2
