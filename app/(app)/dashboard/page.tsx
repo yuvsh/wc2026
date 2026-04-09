@@ -117,7 +117,7 @@ export default function DashboardPage(): React.ReactElement {
       .select("total_points, league_id")
       .eq("user_id", user.id)
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (memberData) {
       setTotalPoints(memberData.total_points);
@@ -139,7 +139,7 @@ export default function DashboardPage(): React.ReactElement {
       .from("golden_boot_predictions")
       .select("id")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     setShowGoldenBootBanner(!gbData);
   }, [supabase]);
