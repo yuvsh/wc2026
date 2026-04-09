@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { generateInviteCode } from "@/lib/utils/inviteCode";
 
 const COPY = {
   pageTitle: "צור ליגה",
@@ -19,13 +20,6 @@ const COPY = {
   whatsappMsg: (code: string) =>
     `היי! הצטרף לליגת הניחושים שלי ל-World Cup 2026 🌍⚽ קוד כניסה: ${code}`,
 };
-
-function generateInviteCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  return Array.from({ length: 6 }, () =>
-    chars.charAt(Math.floor(Math.random() * chars.length))
-  ).join("");
-}
 
 export default function CreateLeaguePage(): React.ReactElement {
   const router = useRouter();
