@@ -6,13 +6,7 @@ interface LeaderboardRowProps {
   isCurrentUser: boolean;
 }
 
-function getInitials(name: string): string {
-  const parts = name.trim().split(" ");
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  }
-  return name.slice(0, 2).toUpperCase();
-}
+import { getInitials } from "@/lib/utils/initials";
 
 function PositionLabel({ position }: { position: number }): React.ReactElement {
   const gold = "text-[#EF9F27] font-bold";
