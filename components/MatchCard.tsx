@@ -33,7 +33,7 @@ const COPY = {
   predictionLabel: (score: string) => `ניחוש שלך: ${score}`,
 };
 
-function getPointsType(points: number | null): PointsType {
+export function getPointsType(points: number | null): PointsType {
   if (points === null) return null;
   if (points === 3) return "bingo";
   if (points === 1) return "correct";
