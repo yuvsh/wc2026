@@ -65,8 +65,18 @@ export default function TournamentPage(): React.ReactElement {
         .order("kickoff_at", { ascending: true }),
     ]);
 
-    if (standingsResult.data) setStandings(standingsResult.data);
-    if (matchesResult.data) setKnockoutMatches(matchesResult.data as KnockoutMatch[]);
+    if (standingsResult.error) {
+      console.error("Failed to load standings:", standingsResult.error);
+    } else if (standingsResult.data) {
+      setStandings(standingsResult.data);
+    }
+
+    if (matchesResult.error) {
+      console.error("Failed to load knockout matches:", matchesResult.error);
+    } else if (matchesResult.data) {
+      setKnockoutMatches(matchesResult.data as KnockoutMatch[]);
+    }
+
     setLoading(false);
   }, [supabase]);
 
@@ -76,9 +86,8 @@ export default function TournamentPage(): React.ReactElement {
 
   // Refresh on page focus
   useEffect(() => {
-    const handleFocus = (): void => { loadData(); };
-    window.addEventListener("focus", handleFocus);
-    return () => window.removeEventListener("focus", handleFocus);
+    window.addEventListener("focus", loadData);
+    return () => window.removeEventListener("focus", loadData);
   }, [loadData]);
 
   // Group standings by group_name

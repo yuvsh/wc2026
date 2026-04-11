@@ -91,16 +91,24 @@ export default function GoldenBootPage(): React.ReactElement {
           .maybeSingle(),
       ]);
 
-      if (playersResult.data) setPlayers(playersResult.data);
+      if (playersResult.error) {
+        console.error("Failed to load players:", playersResult.error);
+      } else if (playersResult.data) {
+        setPlayers(playersResult.data);
+      }
 
-      if (firstMatchResult.data) {
+      if (firstMatchResult.error) {
+        console.error("Failed to load first match kickoff:", firstMatchResult.error);
+      } else if (firstMatchResult.data) {
         const kickoff = new Date(firstMatchResult.data.kickoff_at);
         const lockTime = new Date(kickoff.getTime() - 5 * 60 * 1000);
         setFirstKickoff(kickoff);
         setLocked(new Date() >= lockTime);
       }
 
-      if (existingResult.data?.player_id) {
+      if (existingResult.error) {
+        console.error("Failed to load existing golden boot prediction:", existingResult.error);
+      } else if (existingResult.data?.player_id) {
         setSavedId(existingResult.data.player_id);
         setSelectedId(existingResult.data.player_id);
       }

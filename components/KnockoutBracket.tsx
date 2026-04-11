@@ -17,6 +17,10 @@ interface KnockoutBracketProps {
 
 type Stage = "r32" | "r16" | "qf" | "sf" | "final";
 
+const COPY = {
+  emptyStages: "שלב הנוקאאוט טרם החל",
+};
+
 const STAGE_LABELS: Record<Stage, { he: string; en: string }> = {
   r32: { he: "סבב 32", en: "Round of 32" },
   r16: { he: "סבב 16", en: "Round of 16" },
@@ -103,7 +107,7 @@ export default function KnockoutBracket({ matches }: KnockoutBracketProps): Reac
   if (activeStages.length === 0) {
     return (
       <p className="text-center text-[#9CA3AF] text-[15px] py-12" dir="rtl">
-        שלב הנוקאאוט טרם החל
+        {COPY.emptyStages}
       </p>
     );
   }
