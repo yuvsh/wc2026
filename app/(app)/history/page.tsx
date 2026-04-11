@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import HistoryStatsBar from "@/components/HistoryStatsBar";
 import HistoryMatchCard from "@/components/HistoryMatchCard";
+import { computeHistoryStats, filterByResult, type FilterType } from "@/lib/utils/historyStats";
 
 interface MatchData {
   team_a: string;
@@ -22,8 +23,6 @@ interface HistoryEntry {
   points_awarded: number;
   matches: MatchData | MatchData[];
 }
-
-type FilterType = "all" | "bingo" | "correct" | "miss";
 
 const COPY = {
   title: "היסטוריה",
@@ -80,20 +79,11 @@ export default function HistoryPage(): React.ReactElement {
     load();
   }, []);
 
-  const filtered = entries.filter((e) => {
-    if (filter === "all") return true;
-    if (filter === "bingo") return e.points_awarded === 3;
-    if (filter === "correct") return e.points_awarded === 1;
-    if (filter === "miss") return e.points_awarded === 0;
-    return true;
-  });
+  const filtered = filterByResult(entries, filter);
 
-  // Stats (always from full entries, not filtered)
-  const totalMatches = entries.length;
-  const totalPoints = entries.reduce((sum, e) => sum + (e.points_awarded ?? 0), 0);
-  const bingoCount = entries.filter((e) => e.points_awarded === 3).length;
-  const correctCount = entries.filter((e) => e.points_awarded === 1).length;
-  const missCount = entries.filter((e) => e.points_awarded === 0).length;
+  // Stats always computed from full unfiltered entries
+  const { totalMatches, totalPoints, bingoCount, correctCount, missCount } =
+    computeHistoryStats(entries);
 
   // Group filtered entries by date (newest first)
   const groupedMap = new Map<string, HistoryEntry[]>();
