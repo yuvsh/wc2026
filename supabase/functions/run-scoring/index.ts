@@ -25,13 +25,26 @@ function calcPoints(
   return MISS_POINTS;
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req): Promise<Response> => {
+  const authHeader = req.headers.get("Authorization");
+  const expectedAuth = `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`;
+  if (authHeader !== expectedAuth) {
+    return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
+  }
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
 
-  const { match_id } = await req.json() as { match_id: string };
+  let body: { match_id?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return new Response(JSON.stringify({ error: "invalid JSON body" }), { status: 400 });
+  }
+
+  const { match_id } = body;
 
   if (!match_id) {
     return new Response(JSON.stringify({ error: "match_id required" }), { status: 400 });
@@ -56,7 +69,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: "scores missing" }), { status: 400 });
   }
 
-  // Fetch all predictions for this match
+  // Fetch all unscored predictions for this match
   const { data: predictions, error: predError } = await supabase
     .from("predictions")
     .select("id, user_id, predicted_a, predicted_b")
@@ -71,42 +84,38 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ scored: 0 }), { status: 200 });
   }
 
-  // Calculate and apply points for each prediction
-  for (const pred of predictions) {
-    const points = calcPoints(
-      match.score_a,
-      match.score_b,
-      pred.predicted_a,
-      pred.predicted_b
-    );
+  const errors: string[] = [];
 
-    // Update prediction
-    const { error: updateError } = await supabase
-      .from("predictions")
-      .update({ points_awarded: points })
-      .eq("id", pred.id);
+  // Each score_prediction RPC call is independent — run in parallel for throughput.
+  const results = await Promise.allSettled(
+    predictions.map(async (pred) => {
+      const points = calcPoints(
+        match.score_a,
+        match.score_b,
+        pred.predicted_a,
+        pred.predicted_b
+      );
 
-    if (updateError) continue;
+      // score_prediction atomically updates predictions.points_awarded
+      // and increments league_members.total_points in a single transaction,
+      // preventing race conditions when multiple matches finish concurrently.
+      const { error: rpcError } = await supabase.rpc("score_prediction", {
+        p_prediction_id: pred.id,
+        p_points: points,
+      });
 
-    // Update total_points for all leagues this user belongs to
-    const { data: memberships } = await supabase
-      .from("league_members")
-      .select("league_id, total_points")
-      .eq("user_id", pred.user_id);
+      if (rpcError) throw new Error(`pred ${pred.id}: ${rpcError.message}`);
+    })
+  );
 
-    if (memberships) {
-      for (const membership of memberships) {
-        await supabase
-          .from("league_members")
-          .update({ total_points: membership.total_points + points })
-          .eq("league_id", membership.league_id)
-          .eq("user_id", pred.user_id);
-      }
-    }
-  }
+  results.forEach((r) => {
+    if (r.status === "rejected") errors.push(String(r.reason));
+  });
+
+  const scoredCount = results.filter((r) => r.status === "fulfilled").length;
 
   return new Response(
-    JSON.stringify({ scored: predictions.length }),
+    JSON.stringify({ scored: scoredCount, errors: errors.length > 0 ? errors : undefined }),
     { status: 200, headers: { "Content-Type": "application/json" } }
   );
 });

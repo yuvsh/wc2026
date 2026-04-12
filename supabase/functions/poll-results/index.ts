@@ -7,6 +7,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // TODO: Replace placeholder API with real provider before launch.
 // Recommended: api-football.com (RapidAPI) — set API_FOOTBALL_KEY in Supabase secrets.
 // Endpoint: GET https://v3.football.api-sports.io/fixtures?date=YYYY-MM-DD&league=1&season=2026
+// NOTE: Confirm the correct WC 2026 league ID — league=1 is UEFA Champions League.
+//       Also verify that fixture.fixture.date for postponed matches contains the *rescheduled*
+//       date (not the original) before relying on it for kickoff_at updates.
 // Status mapping: FT → finished, PST → postponed, CANC → cancelled, 1H/2H/HT → live
 
 interface ApiFixture {
@@ -64,7 +67,13 @@ async function fetchTodayFixtures(): Promise<ApiFixture[]> {
   return json.response ?? [];
 }
 
-Deno.serve(async () => {
+Deno.serve(async (req): Promise<Response> => {
+  const authHeader = req.headers.get("Authorization");
+  const expectedAuth = `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`;
+  if (authHeader !== expectedAuth) {
+    return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
+  }
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -81,6 +90,21 @@ Deno.serve(async () => {
     return new Response(JSON.stringify({ updated: 0 }), { status: 200 });
   }
 
+  // Batch-load all relevant matches by api_football_id to avoid N+1 DB lookups
+  const apiIds = fixtures.map((f) => f.fixture.id);
+  const { data: allMatches, error: matchesError } = await supabase
+    .from("matches")
+    .select("id, status, api_football_id")
+    .in("api_football_id", apiIds);
+
+  if (matchesError) {
+    return new Response(JSON.stringify({ error: matchesError.message }), { status: 500 });
+  }
+
+  const matchByApiId = new Map(
+    (allMatches ?? []).map((m) => [m.api_football_id as number, m])
+  );
+
   let updatedCount = 0;
   const finishedMatchIds: string[] = [];
 
@@ -91,13 +115,7 @@ Deno.serve(async () => {
 
     if (!dbStatus) continue;
 
-    // Find our match by api_football_id
-    const { data: match } = await supabase
-      .from("matches")
-      .select("id, status")
-      .eq("api_football_id", apiId)
-      .maybeSingle();
-
+    const match = matchByApiId.get(apiId);
     if (!match) continue;
 
     const wasFinished = match.status === "finished";
@@ -117,19 +135,19 @@ Deno.serve(async () => {
         if (!wasFinished) finishedMatchIds.push(match.id);
       }
     } else if (dbStatus === "postponed") {
-      await supabase
+      const { error } = await supabase
         .from("matches")
         .update({ status: "postponed", kickoff_at: fixture.fixture.date })
         .eq("id", match.id);
-      updatedCount++;
+      if (!error) updatedCount++;
     } else if (dbStatus === "cancelled") {
-      await supabase
+      const { error } = await supabase
         .from("matches")
         .update({ status: "cancelled" })
         .eq("id", match.id);
-      updatedCount++;
+      if (!error) updatedCount++;
     } else if (dbStatus === "live") {
-      await supabase
+      const { error } = await supabase
         .from("matches")
         .update({
           status: "live",
@@ -137,7 +155,7 @@ Deno.serve(async () => {
           score_b: fixture.goals.away,
         })
         .eq("id", match.id);
-      updatedCount++;
+      if (!error) updatedCount++;
     }
   }
 

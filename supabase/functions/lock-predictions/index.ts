@@ -6,7 +6,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const LOCK_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
-Deno.serve(async () => {
+Deno.serve(async (req): Promise<Response> => {
+  const authHeader = req.headers.get("Authorization");
+  const expectedAuth = `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`;
+  if (authHeader !== expectedAuth) {
+    return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
+  }
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -43,28 +49,33 @@ Deno.serve(async () => {
     return new Response(JSON.stringify({ error: predError.message }), { status: 500 });
   }
 
-  // Check if this is the first match ever (i.e. any match is starting now)
-  // If so, lock golden boot predictions and neighbourhood selections for all users
+  // Check if this is the first match — exclude postponed/cancelled from "first" determination
   const { data: firstMatch } = await supabase
     .from("matches")
     .select("id")
-    .not("status", "eq", "cancelled")
+    .in("status", ["scheduled", "live", "finished"])
     .order("kickoff_at", { ascending: true })
     .limit(1)
     .maybeSingle();
 
   if (firstMatch && matchIds.includes(firstMatch.id)) {
-    // Lock all golden boot predictions
-    await supabase
+    const { error: gbError } = await supabase
       .from("golden_boot_predictions")
       .update({ is_locked: true })
       .eq("is_locked", false);
 
-    // Lock neighbourhood for all users
-    await supabase
+    if (gbError) {
+      console.error("Failed to lock golden boot predictions:", gbError.message);
+    }
+
+    const { error: hoodError } = await supabase
       .from("users")
       .update({ hood_locked: true })
       .eq("hood_locked", false);
+
+    if (hoodError) {
+      console.error("Failed to lock neighbourhoods:", hoodError.message);
+    }
   }
 
   return new Response(

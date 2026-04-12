@@ -26,6 +26,7 @@ export interface MatchCardProps {
 const COPY = {
   btnSave: "שמור ניחוש",
   locked: "נעול",
+  live: "חי",
   lockLabel: "⏱ נועל בעוד",
   bingo: "⚽ בינגו · 3 נקודות",
   correct: "✓ תוצאה נכונה · 1 נקודה",
@@ -132,6 +133,7 @@ export default function MatchCard({
   const { display: timerDisplay, isUnderOneHour, isLocked: timerLocked } = useCountdown(kickoffAt);
   const effectiveLocked = isLocked || timerLocked || status !== "scheduled";
   const isFinished = status === "finished";
+  const isLive = status === "live";
 
   const pointsType = getPointsType(pointsAwarded);
   const borderAccent =
@@ -141,6 +143,8 @@ export default function MatchCard({
       ? "border-r-4 border-r-[#22C55E]"
       : pointsType === "miss"
       ? "border-r-4 border-r-[#6B7280]"
+      : isLive
+      ? "border-r-4 border-r-[#DC2626]"
       : "";
 
   async function handleSave(): Promise<void> {
@@ -165,17 +169,17 @@ export default function MatchCard({
         {/* Score inputs */}
         <div className="flex items-center gap-2">
           <ScoreBox
-            value={isFinished ? String(scoreA ?? "") : inputA}
+            value={isFinished || isLive ? String(scoreA ?? "") : inputA}
             onChange={setInputA}
             disabled={effectiveLocked}
-            finished={isFinished}
+            finished={isFinished || isLive}
           />
           <span className="text-[#9CA3AF] text-[15px]">—</span>
           <ScoreBox
-            value={isFinished ? String(scoreB ?? "") : inputB}
+            value={isFinished || isLive ? String(scoreB ?? "") : inputB}
             onChange={setInputB}
             disabled={effectiveLocked}
-            finished={isFinished}
+            finished={isFinished || isLive}
           />
         </div>
 
@@ -201,6 +205,17 @@ export default function MatchCard({
               </span>
             )}
           </>
+        ) : isLive ? (
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold px-2 py-1 rounded-full bg-[#FEE2E2] text-[#DC2626] motion-safe:animate-pulse">
+              {COPY.live}
+            </span>
+            {predictedA !== null && predictedB !== null && (
+              <span className="text-[13px] text-[#6B7280]">
+                {COPY.predictionLabel(`${predictedA}–${predictedB}`)}
+              </span>
+            )}
+          </div>
         ) : effectiveLocked ? (
           <div className="flex items-center gap-1 text-[#6B7280]">
             <LockIcon />

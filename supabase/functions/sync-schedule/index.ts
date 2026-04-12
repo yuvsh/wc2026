@@ -1,12 +1,15 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Sync the full WC 2026 match schedule from API-Football.
-// Upserts all matches using api_football_id as the conflict key.
+// Upserts only static match metadata (teams, kickoff time, stage).
+// Status and scores are managed exclusively by poll-results.
 // Schedule: every 60 minutes via Supabase cron.
 // Run manually once after deploy to populate all 104 matches.
 //
 // TODO: Requires API_FOOTBALL_KEY secret set in Supabase dashboard.
 // Endpoint: GET https://v3.football.api-sports.io/fixtures?season=2026&league=1
+// NOTE: Confirm WC 2026 league ID before launch — league=1 is UEFA Champions League.
+//       The correct FIFA World Cup league ID must be verified against the API-Football docs.
 
 interface ApiFixture {
   fixture: {
@@ -17,10 +20,6 @@ interface ApiFixture {
   teams: {
     home: { name: string; code: string };
     away: { name: string; code: string };
-  };
-  goals: {
-    home: number | null;
-    away: number | null;
   };
   league: {
     round: string;
@@ -35,6 +34,8 @@ function roundToStage(round: string): string {
   if (r.includes("quarter")) return "qf";
   if (r.includes("semi")) return "sf";
   if (r.includes("final")) return "final";
+  // Log unmapped rounds so they are visible rather than silently miscategorised
+  console.warn(`Unknown round name, defaulting to "group": ${round}`);
   return "group";
 }
 
@@ -90,7 +91,13 @@ const TEAM_CODE_MAP: Record<string, string> = {
   "Israel": "il",
 };
 
-Deno.serve(async () => {
+Deno.serve(async (req): Promise<Response> => {
+  const authHeader = req.headers.get("Authorization");
+  const expectedAuth = `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`;
+  if (authHeader !== expectedAuth) {
+    return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
+  }
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -105,9 +112,17 @@ Deno.serve(async () => {
   }
 
   const url = "https://v3.football.api-sports.io/fixtures?season=2026&league=1";
-  const res = await fetch(url, {
-    headers: { "x-apisports-key": apiKey },
-  });
+  let res: globalThis.Response;
+  try {
+    res = await fetch(url, {
+      headers: { "x-apisports-key": apiKey },
+    });
+  } catch (err) {
+    return new Response(
+      JSON.stringify({ error: `Network error fetching API-Football: ${String(err)}` }),
+      { status: 500 }
+    );
+  }
 
   if (!res.ok) {
     return new Response(
@@ -123,6 +138,9 @@ Deno.serve(async () => {
     return new Response(JSON.stringify({ upserted: 0 }), { status: 200 });
   }
 
+  // Only upsert static schedule metadata — never include status or scores here.
+  // Status and scores are owned by poll-results to prevent this hourly sync
+  // from reverting live/finished matches back to "scheduled".
   const rows = fixtures.map((f) => ({
     api_football_id: f.fixture.id,
     team_a: f.teams.home.name,
@@ -131,9 +149,6 @@ Deno.serve(async () => {
     team_b_code: TEAM_CODE_MAP[f.teams.away.name] ?? f.teams.away.code?.toLowerCase() ?? "un",
     kickoff_at: f.fixture.date,
     stage: roundToStage(f.league.round),
-    status: "scheduled",
-    score_a: f.goals.home,
-    score_b: f.goals.away,
   }));
 
   const { error, count } = await supabase

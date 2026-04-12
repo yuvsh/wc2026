@@ -10,13 +10,26 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const GOLDEN_BOOT_POINTS = 5;
 
-Deno.serve(async (req) => {
+Deno.serve(async (req): Promise<Response> => {
+  const authHeader = req.headers.get("Authorization");
+  const expectedAuth = `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`;
+  if (authHeader !== expectedAuth) {
+    return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
+  }
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
 
-  const { player_id } = await req.json() as { player_id: string };
+  let body: { player_id?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return new Response(JSON.stringify({ error: "invalid JSON body" }), { status: 400 });
+  }
+
+  const { player_id } = body;
 
   if (!player_id) {
     return new Response(JSON.stringify({ error: "player_id required" }), { status: 400 });
@@ -44,52 +57,42 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: winnersError.message }), { status: 500 });
   }
 
-  if (!winners || winners.length === 0) {
+  const winnerIds = winners?.map((w) => w.user_id) ?? [];
+
+  const errors: string[] = [];
+
+  // Award points to correct predictors via atomic RPC
+  for (const userId of winnerIds) {
+    const { error: rpcError } = await supabase.rpc("score_golden_boot", {
+      p_user_id: userId,
+      p_player_id: player_id,
+      p_points: GOLDEN_BOOT_POINTS,
+    });
+    if (rpcError) {
+      errors.push(`user ${userId}: ${rpcError.message}`);
+    }
+  }
+
+  // If any winner failed to be scored, do NOT proceed to zero-out losers.
+  // Running the zero-out sweep after a partial failure would set those failed
+  // winners to points_awarded = 0, making the failure unrecoverable on retry.
+  if (errors.length > 0) {
     return new Response(
-      JSON.stringify({ awarded: 0, player: player.name }),
-      { status: 200 }
+      JSON.stringify({ error: "partial failure — aborting zero-out", errors }),
+      { status: 500 }
     );
   }
 
-  const winnerIds = winners.map((w) => w.user_id);
-
-  // Mark winning predictions as resolved
-  const { error: updatePredError } = await supabase
-    .from("golden_boot_predictions")
-    .update({ points_awarded: GOLDEN_BOOT_POINTS })
-    .in("user_id", winnerIds);
-
-  if (updatePredError) {
-    return new Response(JSON.stringify({ error: updatePredError.message }), { status: 500 });
-  }
-
-  // Mark all other predictions as resolved with 0 points
+  // Zero out all remaining unresolved predictions (those who guessed wrong).
+  // This runs even if winnerIds is empty (nobody guessed correctly).
   const { error: updateMissError } = await supabase
     .from("golden_boot_predictions")
     .update({ points_awarded: 0 })
-    .not("user_id", "in", `(${winnerIds.join(",")})`)
+    .neq("player_id", player_id)
     .is("points_awarded", null);
 
   if (updateMissError) {
     return new Response(JSON.stringify({ error: updateMissError.message }), { status: 500 });
-  }
-
-  // Add golden boot points to league_members.total_points for each winner
-  for (const userId of winnerIds) {
-    const { data: memberships } = await supabase
-      .from("league_members")
-      .select("league_id, total_points")
-      .eq("user_id", userId);
-
-    if (memberships) {
-      for (const membership of memberships) {
-        await supabase
-          .from("league_members")
-          .update({ total_points: membership.total_points + GOLDEN_BOOT_POINTS })
-          .eq("league_id", membership.league_id)
-          .eq("user_id", userId);
-      }
-    }
   }
 
   return new Response(
