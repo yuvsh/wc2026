@@ -155,9 +155,11 @@ export default function CreateLeaguePage(): React.ReactElement {
       <button
         onClick={handleCreate}
         disabled={!leagueName.trim() || creating}
-        className="w-full h-12 rounded-xl bg-[#0D9488] text-white text-[15px] font-medium disabled:opacity-40 active:opacity-80 transition-opacity"
+        className="w-full h-12 rounded-xl bg-[#0D9488] text-white text-[15px] font-medium disabled:opacity-40 active:opacity-80 transition-opacity flex items-center justify-center"
       >
-        {COPY.createBtn}
+        {creating ? (
+          <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+        ) : COPY.createBtn}
       </button>
     </main>
   );

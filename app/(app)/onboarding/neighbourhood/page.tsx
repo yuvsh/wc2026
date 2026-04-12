@@ -114,9 +114,11 @@ export default function NeighbourhoodPage(): React.ReactElement {
         <button
           onClick={handleContinue}
           disabled={!selectedId || saving}
-          className="w-full h-12 rounded-xl bg-[#0D9488] text-white text-[15px] font-medium disabled:opacity-40 transition-opacity active:opacity-80"
+          className="w-full h-12 rounded-xl bg-[#0D9488] text-white text-[15px] font-medium disabled:opacity-40 transition-opacity active:opacity-80 flex items-center justify-center"
         >
-          {COPY.btnContinue}
+          {saving ? (
+            <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+          ) : COPY.btnContinue}
         </button>
         <button
           onClick={handleSkip}

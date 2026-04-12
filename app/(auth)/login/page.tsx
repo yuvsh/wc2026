@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 const COPY = {
@@ -14,14 +15,17 @@ const COPY = {
 
 export default function LoginPage(): React.ReactElement {
   const supabase = createClient();
+  const [loading, setLoading] = useState(false);
 
   async function signInWithGoogle(): Promise<void> {
+    setLoading(true);
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
+    // OAuth redirect will navigate away; reset in case it fails
+    setLoading(false);
   }
-
 
   return (
     <main className="min-h-screen bg-white flex flex-col items-center justify-center px-6">
@@ -46,10 +50,18 @@ export default function LoginPage(): React.ReactElement {
         <div className="w-full flex flex-col gap-3">
           <button
             onClick={signInWithGoogle}
-            className="w-full flex items-center justify-center gap-3 h-12 rounded-xl border border-[#D1D5DB] bg-white text-[#111827] text-[15px] font-medium active:opacity-80 transition-opacity"
+            disabled={loading}
+            aria-label={COPY.btnGoogle}
+            className="w-full flex items-center justify-center gap-3 h-12 rounded-xl border border-[#D1D5DB] bg-white text-[#111827] text-[15px] font-medium active:opacity-80 transition-opacity disabled:opacity-60"
           >
-            <GoogleIcon />
-            {COPY.btnGoogle}
+            {loading ? (
+              <div className="w-5 h-5 border-2 border-[#D1D5DB] border-t-[#111827] rounded-full animate-spin" />
+            ) : (
+              <>
+                <GoogleIcon />
+                {COPY.btnGoogle}
+              </>
+            )}
           </button>
 
         </div>

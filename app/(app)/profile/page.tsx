@@ -95,7 +95,7 @@ function SettingsRow({
       className="w-full flex items-center justify-between px-4 py-3.5 bg-white border-b border-[#F3F4F6] last:border-b-0 disabled:opacity-60 text-right"
     >
       <span className={`text-[15px] ${disabled ? "text-[#9CA3AF]" : "text-[#0D9488]"}`}>
-        {!disabled && onTap ? "›" : ""}
+        {!disabled && onTap ? "‹" : ""}
       </span>
       <div className="flex flex-col items-end gap-0.5">
         <span className="text-[15px] text-[#111827]">{value}</span>
@@ -119,6 +119,7 @@ export default function ProfilePage(): React.ReactElement {
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [saving, setSaving] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const showToast = useCallback((msg: string) => {
@@ -195,6 +196,11 @@ export default function ProfilePage(): React.ReactElement {
 
     load();
   }, [supabase]);
+
+  async function handleLogout(): Promise<void> {
+    setLoggingOut(true);
+    await logout();
+  }
 
   async function handleSaveName(): Promise<void> {
     const trimmed = nameInput.trim();
@@ -357,22 +363,23 @@ export default function ProfilePage(): React.ReactElement {
             className="flex items-center justify-end gap-2 px-4 py-3 border-t border-[#F3F4F6] text-[14px] text-[#0D9488] font-medium"
           >
             {COPY.joinOrCreate}
-            <span>›</span>
+            <span>‹</span>
           </Link>
         </div>
       </div>
 
       {/* Logout + version */}
       <div className="mx-4 mt-auto flex flex-col gap-3">
-        <form action={logout}>
-          <button
-            type="submit"
-            aria-label="התנתק מהחשבון"
-            className="w-full py-3 rounded-xl bg-[#FEE2E2] text-[#DC2626] text-[15px] font-bold min-h-[44px]"
-          >
-            {COPY.logout}
-          </button>
-        </form>
+        <button
+          onClick={handleLogout}
+          disabled={loggingOut}
+          aria-label="התנתק מהחשבון"
+          className="w-full py-3 rounded-xl bg-[#FEE2E2] text-[#DC2626] text-[15px] font-bold min-h-[44px] flex items-center justify-center disabled:opacity-60"
+        >
+          {loggingOut ? (
+            <div className="w-5 h-5 border-2 border-[#FCA5A5] border-t-[#DC2626] rounded-full animate-spin" />
+          ) : COPY.logout}
+        </button>
         <p className="text-center text-[12px] text-[#9CA3AF]">{COPY.version(APP_VERSION)}</p>
       </div>
 

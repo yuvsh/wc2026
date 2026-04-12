@@ -155,9 +155,11 @@ export default function LeaguePage(): React.ReactElement {
         <button
           onClick={handleJoin}
           disabled={joining}
-          className="h-12 px-5 rounded-xl bg-[#0D9488] text-white text-[15px] font-medium disabled:opacity-40 active:opacity-80 transition-opacity shrink-0"
+          className="h-12 px-5 rounded-xl bg-[#0D9488] text-white text-[15px] font-medium disabled:opacity-40 active:opacity-80 transition-opacity shrink-0 flex items-center justify-center min-w-[72px]"
         >
-          {COPY.joinBtn}
+          {joining ? (
+            <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+          ) : COPY.joinBtn}
         </button>
         <input
           type="text"
