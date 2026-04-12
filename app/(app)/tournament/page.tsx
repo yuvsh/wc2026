@@ -115,14 +115,15 @@ export default function TournamentPage(): React.ReactElement {
       </div>
 
       {/* Content */}
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-[#0D9488] border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (
       <div className="flex-1 px-4 py-4">
-        {loading ? (
-          <div className="flex items-center justify-center mt-12">
-            <div className="w-8 h-8 border-2 border-[#0D9488] border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : tab === "groups" ? (
+        {tab === "groups" ? (
           groupNames.length === 0 ? (
-            <p className="text-center text-[#9CA3AF] text-[15px] mt-12">{COPY.emptyGroups}</p>
+            <div className="flex-1 flex items-center justify-center"><p className="text-[15px] text-[#9CA3AF]">{COPY.emptyGroups}</p></div>
           ) : (
             <div className="flex flex-col gap-4">
               {groupNames.map((name) => (
@@ -138,6 +139,7 @@ export default function TournamentPage(): React.ReactElement {
           <KnockoutBracket matches={knockoutMatches} />
         )}
       </div>
+      )}
     </div>
   );
 }

@@ -134,11 +134,11 @@ export default function HistoryPage(): React.ReactElement {
       {/* Match list */}
       <div className="flex-1 px-4 py-4 flex flex-col gap-6">
         {loading ? (
-          <div className="flex items-center justify-center mt-12">
+          <div className="flex-1 flex items-center justify-center">
             <div className="w-8 h-8 border-2 border-[#0D9488] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
-          <p className="text-center text-[#9CA3AF] text-[15px] mt-12">{COPY.empty}</p>
+          <div className="flex-1 flex items-center justify-center"><p className="text-[15px] text-[#9CA3AF]">{COPY.empty}</p></div>
         ) : (
           dateKeys.map((dateKey) => (
             <div key={dateKey} className="flex flex-col gap-3">

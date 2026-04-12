@@ -182,7 +182,7 @@ export default function GoldenBootPage(): React.ReactElement {
       {/* Player list */}
       <div className="flex-1 px-4 pb-32 overflow-y-auto">
         {loading ? (
-          <div className="flex items-center justify-center mt-12">
+          <div className="flex-1 flex items-center justify-center">
             <div className="w-8 h-8 border-2 border-[#0D9488] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
