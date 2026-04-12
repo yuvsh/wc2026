@@ -151,7 +151,7 @@ export default function GoldenBootPage(): React.ReactElement {
   const hasUnsavedChange = selectedId !== savedId;
 
   return (
-    <div className="flex flex-col min-h-full" dir="rtl">
+    <div className="flex-1 flex flex-col" dir="rtl">
       {/* Header */}
       <div className="bg-white border-b border-[#E5E7EB] px-4 py-3 flex items-center justify-between">
         <button

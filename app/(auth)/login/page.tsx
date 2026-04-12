@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { flushSync } from "react-dom";
 import { createClient } from "@/lib/supabase/client";
 
 const COPY = {
@@ -18,12 +19,12 @@ export default function LoginPage(): React.ReactElement {
   const [loading, setLoading] = useState(false);
 
   async function signInWithGoogle(): Promise<void> {
-    setLoading(true);
+    // flushSync ensures the spinner renders before the browser navigates away
+    flushSync(() => setLoading(true));
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
-    // OAuth redirect will navigate away; reset in case it fails
     setLoading(false);
   }
 

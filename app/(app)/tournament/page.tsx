@@ -90,7 +90,7 @@ export default function TournamentPage(): React.ReactElement {
   const groupNames = Array.from(groupMap.keys()).sort();
 
   return (
-    <div className="flex flex-col min-h-full" dir="rtl">
+    <div className="flex-1 flex flex-col" dir="rtl">
       {/* Header */}
       <div className="bg-white border-b border-[#E5E7EB] px-4 py-3 text-right">
         <h1 className="text-[17px] font-bold text-[#111827]">{COPY.title}</h1>
