@@ -22,11 +22,15 @@ export default function LoginPage(): React.ReactElement {
     // setTimeout yields to the browser so it paints the spinner
     // before the OAuth redirect begins (microtasks alone don't guarantee a paint)
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
-    await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
-    setLoading(false);
+    if (error) {
+      // Redirect never fired — surface the failure and re-enable the button
+      setLoading(false);
+    }
+    // On success: component unmounts via redirect, no cleanup needed
   }
 
   return (

@@ -76,7 +76,7 @@ export default function CreateLeaguePage(): React.ReactElement {
 
   if (inviteCode) {
     return (
-      <main className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center px-4 pb-8">
+      <main className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center px-4 pb-8" dir="rtl">
         <div className="w-full max-w-sm flex flex-col items-center gap-6">
           {/* Title */}
           <div className="text-center">

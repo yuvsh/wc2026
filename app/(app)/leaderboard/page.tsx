@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Podium from "@/components/Podium";
 import LeaderboardRow from "@/components/LeaderboardRow";
@@ -34,7 +34,7 @@ const COPY = {
 };
 
 export default function LeaderboardPage(): React.ReactElement {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [leagues, setLeagues] = useState<League[]>([]);
   const [activeLeagueId, setActiveLeagueId] = useState<string | null>(null);
@@ -44,8 +44,8 @@ export default function LeaderboardPage(): React.ReactElement {
 
   useEffect(() => {
     async function load(): Promise<void> {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) { setLoading(false); return; }
       setUserId(user.id);
 
       const { data: memberRows } = await supabase

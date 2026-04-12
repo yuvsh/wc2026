@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import HistoryStatsBar from "@/components/HistoryStatsBar";
 import HistoryMatchCard from "@/components/HistoryMatchCard";
@@ -46,7 +46,7 @@ function getMatch(entry: HistoryEntry) {
 }
 
 export default function HistoryPage(): React.ReactElement {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [filter, setFilter] = useState<FilterType>("all");
@@ -54,8 +54,8 @@ export default function HistoryPage(): React.ReactElement {
 
   useEffect(() => {
     async function load(): Promise<void> {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) { setLoading(false); return; }
 
       const { data } = await supabase
         .from("predictions")

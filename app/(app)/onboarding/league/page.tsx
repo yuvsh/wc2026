@@ -121,7 +121,7 @@ export default function LeaguePage(): React.ReactElement {
   }
 
   return (
-    <main className="min-h-screen bg-[#F8FAFC] flex flex-col px-4 pt-12 pb-8">
+    <main className="min-h-screen bg-[#F8FAFC] flex flex-col px-4 pt-12 pb-8" dir="rtl">
       {/* Step dots */}
       <div className="flex justify-center gap-2 mb-8">
         <div className="h-2 w-2 rounded-full bg-[#D1D5DB]" />

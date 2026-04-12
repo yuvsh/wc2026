@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import PlayerList from "@/components/PlayerList";
@@ -48,7 +48,7 @@ function LockCountdown({ kickoffAt }: { kickoffAt: Date }): React.ReactElement {
 }
 
 export default function GoldenBootPage(): React.ReactElement {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
 
   const [players, setPlayers] = useState<Player[]>([]);
@@ -67,10 +67,8 @@ export default function GoldenBootPage(): React.ReactElement {
 
   useEffect(() => {
     async function load(): Promise<void> {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) { setLoading(false); return; }
 
       const [playersResult, firstMatchResult, existingResult] = await Promise.all([
         supabase

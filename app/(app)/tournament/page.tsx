@@ -120,7 +120,7 @@ export default function TournamentPage(): React.ReactElement {
           <div className="w-8 h-8 border-2 border-[#0D9488] border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
-      <div className="flex-1 px-4 py-4">
+      <div className="flex-1 flex flex-col px-4 py-4">
         {tab === "groups" ? (
           groupNames.length === 0 ? (
             <div className="flex-1 flex items-center justify-center"><p className="text-[15px] text-[#9CA3AF]">{COPY.emptyGroups}</p></div>

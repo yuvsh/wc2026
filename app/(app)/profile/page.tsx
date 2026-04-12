@@ -199,7 +199,15 @@ export default function ProfilePage(): React.ReactElement {
 
   async function handleLogout(): Promise<void> {
     setLoggingOut(true);
-    await logout();
+    try {
+      await logout();
+    } catch (err) {
+      // NEXT_REDIRECT is not a real error — Next.js uses it internally to trigger redirects
+      if (err instanceof Error && "digest" in err && typeof (err as { digest?: string }).digest === "string" && (err as { digest: string }).digest.startsWith("NEXT_REDIRECT")) {
+        throw err;
+      }
+      setLoggingOut(false);
+    }
   }
 
   async function handleSaveName(): Promise<void> {

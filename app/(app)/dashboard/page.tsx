@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import MatchCard from "@/components/MatchCard";
@@ -70,7 +70,7 @@ function groupByDate(matches: Match[]): Map<string, Match[]> {
 }
 
 export default function DashboardPage(): React.ReactElement {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [matches, setMatches] = useState<Match[]>([]);
   const [predictions, setPredictions] = useState<Map<string, Prediction>>(new Map());

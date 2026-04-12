@@ -40,20 +40,30 @@ export default function NeighbourhoodPage(): React.ReactElement {
   async function handleContinue(): Promise<void> {
     if (!selectedId) return;
     setSaving(true);
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase
-        .from("users")
-        .update({ neighbourhood_id: selectedId })
-        .eq("id", user.id);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from("users")
+          .update({ neighbourhood_id: selectedId })
+          .eq("id", user.id);
+      }
+      router.push("/onboarding/league");
+    } finally {
+      setSaving(false);
     }
-
-    router.push("/onboarding/league");
   }
 
   function handleSkip(): void {
     router.push("/onboarding/league");
+  }
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#0D9488] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (
@@ -75,11 +85,6 @@ export default function NeighbourhoodPage(): React.ReactElement {
 
       {/* Neighbourhood grid */}
       <div className="grid grid-cols-2 gap-3 mb-8 flex-1">
-        {loading ? (
-          <div className="col-span-2 flex items-center justify-center py-12">
-            <div className="w-8 h-8 border-2 border-[#0D9488] border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : null}
         {neighbourhoods.map((hood) => {
           const isSelected = selectedId === hood.id;
           return (
