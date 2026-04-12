@@ -119,6 +119,7 @@ export default function BottomTabBar(): React.ReactElement {
 
   return (
     <nav
+      aria-label="ניווט ראשי"
       className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#E5E7EB] flex items-center"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
@@ -132,8 +133,7 @@ export default function BottomTabBar(): React.ReactElement {
           >
             {tab.icon(active)}
             <span
-              className="text-[11px] font-medium"
-              style={{ color: active ? "#0D9488" : "#6B7280" }}
+              className={`text-[11px] font-medium ${active ? "text-[#0D9488]" : "text-[#6B7280]"}`}
             >
               {tab.label}
             </span>

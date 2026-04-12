@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { logout } from "@/app/actions/auth";
 import { getInitials } from "@/lib/utils/initials";
@@ -105,9 +106,11 @@ function SettingsRow({
 }
 
 export default function ProfilePage(): React.ReactElement {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [neighbourhood, setNeighbourhood] = useState<Neighbourhood | null>(null);
   const [leagues, setLeagues] = useState<League[]>([]);
   const [stats, setStats] = useState<UserStats>({ totalPoints: 0, bingoCount: 0, rank: null });
@@ -125,8 +128,9 @@ export default function ProfilePage(): React.ReactElement {
 
   useEffect(() => {
     async function load(): Promise<void> {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) { setLoading(false); return; }
+      setUserId(user.id);
 
       const [profileResult, leaguesResult, predictionsResult] = await Promise.all([
         supabase
@@ -145,53 +149,39 @@ export default function ProfilePage(): React.ReactElement {
           .not("points_awarded", "is", null),
       ]);
 
-      if (profileResult.error) {
-        console.error("Failed to load profile:", profileResult.error);
-      } else if (profileResult.data) {
+      if (profileResult.data) {
         setProfile(profileResult.data);
         setNameInput(profileResult.data.display_name);
 
-        // Load neighbourhood name if set
         if (profileResult.data.neighbourhood_id) {
-          const { data: hoodData, error: hoodError } = await supabase
+          const { data: hoodData } = await supabase
             .from("neighbourhoods")
             .select("id, name")
             .eq("id", profileResult.data.neighbourhood_id)
             .single();
-          if (hoodError) {
-            console.error("Failed to load neighbourhood:", hoodError);
-          } else if (hoodData) {
-            setNeighbourhood(hoodData);
-          }
+          if (hoodData) setNeighbourhood(hoodData);
         }
       }
 
-      if (leaguesResult.error) {
-        console.error("Failed to load leagues:", leaguesResult.error);
-      } else if (leaguesResult.data) {
+      if (leaguesResult.data) {
         setLeagues(leaguesResult.data as League[]);
 
-        // Compute rank from first league
         if (leaguesResult.data.length > 0) {
           const firstLeagueId = leaguesResult.data[0].league_id;
-          const { data: members, error: membersError } = await supabase
+          const { data: members } = await supabase
             .from("league_members")
             .select("user_id, total_points")
             .eq("league_id", firstLeagueId)
             .order("total_points", { ascending: false });
 
-          if (membersError) {
-            console.error("Failed to load league members:", membersError);
-          } else if (members) {
+          if (members) {
             const pos = members.findIndex((m) => m.user_id === user.id) + 1;
             setStats((prev) => ({ ...prev, rank: pos > 0 ? pos : null }));
           }
         }
       }
 
-      if (predictionsResult.error) {
-        console.error("Failed to load predictions:", predictionsResult.error);
-      } else if (predictionsResult.data) {
+      if (predictionsResult.data) {
         const totalPoints = predictionsResult.data.reduce(
           (sum, p) => sum + (p.points_awarded ?? 0),
           0
@@ -208,26 +198,24 @@ export default function ProfilePage(): React.ReactElement {
 
   async function handleSaveName(): Promise<void> {
     const trimmed = nameInput.trim();
-    if (!trimmed || saving) return;
+    if (!trimmed || saving || !userId) return;
 
     setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const { error } = await supabase
+        .from("users")
+        .update({ display_name: trimmed })
+        .eq("id", userId);
 
-    const { error } = await supabase
-      .from("users")
-      .update({ display_name: trimmed })
-      .eq("id", user.id);
-
-    setSaving(false);
-
-    if (error) {
-      console.error("Failed to update display name:", error);
-      showToast(COPY.errorToast);
-    } else {
-      setProfile((prev) => prev ? { ...prev, display_name: trimmed } : prev);
-      setEditingName(false);
-      showToast(COPY.savedToast);
+      if (error) {
+        showToast(COPY.errorToast);
+      } else {
+        setProfile((prev) => prev ? { ...prev, display_name: trimmed } : prev);
+        setEditingName(false);
+        showToast(COPY.savedToast);
+      }
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -289,19 +277,19 @@ export default function ProfilePage(): React.ReactElement {
             <div className="px-4 py-3 flex items-center gap-3 border-b border-[#F3F4F6]">
               <div className="flex gap-2">
                 <button
-                  onClick={() => { setEditingName(false); setNameInput(profile?.display_name ?? ""); }}
-                  aria-label="בטל עריכת שם"
-                  className="text-[14px] text-[#6B7280] px-3 py-1.5 rounded-lg border border-[#E5E7EB] min-h-[44px]"
-                >
-                  {COPY.cancel}
-                </button>
-                <button
                   onClick={handleSaveName}
                   disabled={saving || !nameInput.trim()}
                   aria-label="שמור שם תצוגה"
                   className="text-[14px] text-white bg-[#0D9488] px-3 py-1.5 rounded-lg disabled:opacity-40 min-h-[44px]"
                 >
                   {saving ? COPY.saving : COPY.save}
+                </button>
+                <button
+                  onClick={() => { setEditingName(false); setNameInput(profile?.display_name ?? ""); }}
+                  aria-label="בטל עריכת שם"
+                  className="text-[14px] text-[#6B7280] px-3 py-1.5 rounded-lg border border-[#E5E7EB] min-h-[44px]"
+                >
+                  {COPY.cancel}
                 </button>
               </div>
               <input
@@ -326,7 +314,7 @@ export default function ProfilePage(): React.ReactElement {
           <SettingsRow
             label={profile?.hood_locked ? COPY.labelNeighbourhoodLocked : COPY.labelNeighbourhood}
             value={neighbourhood?.name ?? COPY.neighbourhoodNone}
-            onTap={profile?.hood_locked ? undefined : () => { window.location.href = "/onboarding/neighbourhood"; }}
+            onTap={profile?.hood_locked ? undefined : () => router.push("/onboarding/neighbourhood")}
             disabled={profile?.hood_locked}
             disabledHint={profile?.hood_locked ? COPY.neighbourhoodLocked : undefined}
           />

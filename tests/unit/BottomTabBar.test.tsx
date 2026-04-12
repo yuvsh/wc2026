@@ -74,7 +74,7 @@ describe("active tab highlighting", () => {
     ({ href, label }) => {
       mockUsePathname.mockReturnValue(href);
       render(<BottomTabBar />);
-      expect(screen.getByText(label)).toHaveStyle({ color: TEAL });
+      expect(screen.getByText(label).className).toContain("text-[#0D9488]");
     }
   );
 
@@ -85,7 +85,7 @@ describe("active tab highlighting", () => {
       render(<BottomTabBar />);
       const inactive = ALL_TABS.filter((t) => t.href !== href);
       for (const tab of inactive) {
-        expect(screen.getByText(tab.label)).toHaveStyle({ color: GRAY });
+        expect(screen.getByText(tab.label).className).toContain("text-[#6B7280]");
       }
     }
   );
@@ -100,7 +100,7 @@ describe("active tab on sub-paths", () => {
     ({ href, label }) => {
       mockUsePathname.mockReturnValue(`${href}/nested`);
       render(<BottomTabBar />);
-      expect(screen.getByText(label)).toHaveStyle({ color: TEAL });
+      expect(screen.getByText(label).className).toContain("text-[#0D9488]");
     }
   );
 });
@@ -113,7 +113,7 @@ describe("no active tab on unrelated path", () => {
     mockUsePathname.mockReturnValue("/some-unknown-route");
     render(<BottomTabBar />);
     for (const tab of ALL_TABS) {
-      expect(screen.getByText(tab.label)).toHaveStyle({ color: GRAY });
+      expect(screen.getByText(tab.label).className).toContain("text-[#6B7280]");
     }
   });
 });

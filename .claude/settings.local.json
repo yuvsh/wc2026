@@ -1,7 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "Bash(textutil -convert txt -stdout /Users/yuvsh/code/wc2026/docs/plan.md)"
+      "Bash(textutil -convert txt -stdout /Users/yuvsh/code/wc2026/docs/plan.md)",
+      "Bash(npx supabase:*)",
+      "Bash(textutil:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git remote:*)",
+      "Bash(git push:*)",
+      "Bash(git checkout:*)",
+      "Bash(npm run:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

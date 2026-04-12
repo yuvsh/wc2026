@@ -25,7 +25,7 @@ const COPY = {
   savedToast: "הבחירה נשמרה ✓",
   errorToast: "שגיאה בשמירה, נסה שוב",
   noSelection: "בחר שחקן מהרשימה",
-  back: "←",
+  back: "→",
 };
 
 function LockCountdown({ kickoffAt }: { kickoffAt: Date }): React.ReactElement {
@@ -91,24 +91,16 @@ export default function GoldenBootPage(): React.ReactElement {
           .maybeSingle(),
       ]);
 
-      if (playersResult.error) {
-        console.error("Failed to load players:", playersResult.error);
-      } else if (playersResult.data) {
-        setPlayers(playersResult.data);
-      }
+      if (playersResult.data) setPlayers(playersResult.data);
 
-      if (firstMatchResult.error) {
-        console.error("Failed to load first match kickoff:", firstMatchResult.error);
-      } else if (firstMatchResult.data) {
+      if (firstMatchResult.data) {
         const kickoff = new Date(firstMatchResult.data.kickoff_at);
         const lockTime = new Date(kickoff.getTime() - 5 * 60 * 1000);
         setFirstKickoff(kickoff);
         setLocked(new Date() >= lockTime);
       }
 
-      if (existingResult.error) {
-        console.error("Failed to load existing golden boot prediction:", existingResult.error);
-      } else if (existingResult.data?.player_id) {
+      if (existingResult.data?.player_id) {
         setSavedId(existingResult.data.player_id);
         setSelectedId(existingResult.data.player_id);
       }

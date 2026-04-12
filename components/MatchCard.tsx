@@ -26,6 +26,7 @@ export interface MatchCardProps {
 const COPY = {
   btnSave: "שמור ניחוש",
   locked: "נעול",
+  lockLabel: "⏱ נועל בעוד",
   bingo: "⚽ בינגו · 3 נקודות",
   correct: "✓ תוצאה נכונה · 1 נקודה",
   miss: "✗ פספוס · 0 נקודות",
@@ -85,7 +86,7 @@ function ScoreBox({
 }): React.ReactElement {
   if (finished) {
     return (
-      <div className="w-[38px] h-[38px] rounded-lg bg-[#111827] flex items-center justify-center">
+      <div className="w-[44px] h-[44px] rounded-lg bg-[#111827] flex items-center justify-center">
         <span className="text-white text-[17px] font-bold">{value}</span>
       </div>
     );
@@ -100,7 +101,7 @@ function ScoreBox({
       value={value}
       onChange={(e) => onChange?.(e.target.value)}
       disabled={disabled}
-      className="w-[38px] h-[38px] rounded-lg border text-center text-[17px] font-bold outline-none transition-colors
+      className="w-[44px] h-[44px] rounded-lg border text-center text-[17px] font-bold outline-none transition-colors
         disabled:bg-[#F3F4F6] disabled:text-[#9CA3AF] disabled:border-[#E5E7EB]
         enabled:border-[#0D9488] enabled:text-[#111827] enabled:bg-white
         focus:ring-2 focus:ring-[#0D9488] focus:ring-opacity-30"
@@ -212,12 +213,12 @@ export default function MatchCard({
                 isUnderOneHour ? "text-[#0D9488]" : "text-[#6B7280]"
               }`}
             >
-              ⏱ נועל בעוד {timerDisplay}
+              {COPY.lockLabel} {timerDisplay}
             </span>
             <button
               onClick={handleSave}
               disabled={saving || inputA === "" || inputB === ""}
-              className="w-full h-10 rounded-lg bg-[#0D9488] text-white text-[13px] font-medium disabled:opacity-40 active:opacity-80 transition-opacity"
+              className="w-full h-[44px] rounded-lg bg-[#0D9488] text-white text-[13px] font-medium disabled:opacity-40 active:opacity-80 transition-opacity"
             >
               {COPY.btnSave}
             </button>

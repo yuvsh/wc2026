@@ -79,6 +79,7 @@ export default function DashboardPage(): React.ReactElement {
   const [showGoldenBootBanner, setShowGoldenBootBanner] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   function showToast(message: string): void {
     setToast(message);
@@ -86,8 +87,9 @@ export default function DashboardPage(): React.ReactElement {
   }
 
   const loadData = useCallback(async (): Promise<void> => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) { setLoading(false); return; }
     setUserId(user.id);
 
     // Fetch matches (exclude cancelled)
@@ -142,6 +144,11 @@ export default function DashboardPage(): React.ReactElement {
       .maybeSingle();
 
     setShowGoldenBootBanner(!gbData);
+    } catch {
+      showToast(COPY.toastError);
+    } finally {
+      setLoading(false);
+    }
   }, [supabase]);
 
   useEffect(() => {
@@ -263,7 +270,11 @@ export default function DashboardPage(): React.ReactElement {
 
       {/* Match list */}
       <div className="flex-1 px-4 py-4 flex flex-col gap-6">
-        {matches.length === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center mt-12">
+            <div className="w-8 h-8 border-2 border-[#0D9488] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : matches.length === 0 ? (
           <p className="text-center text-[#9CA3AF] text-[15px] mt-12">{COPY.noMatches}</p>
         ) : (
           dateKeys.map((dateKey) => (

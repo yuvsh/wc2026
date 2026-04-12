@@ -37,7 +37,7 @@ export default function CreateLeaguePage(): React.ReactElement {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setCreating(false); return; }
 
     const code = generateInviteCode();
 
@@ -127,7 +127,14 @@ export default function CreateLeaguePage(): React.ReactElement {
   }
 
   return (
-    <main className="min-h-screen bg-[#F8FAFC] flex flex-col px-4 pt-12 pb-8">
+    <main className="min-h-screen bg-[#F8FAFC] flex flex-col px-4 pt-12 pb-8" dir="rtl">
+      <button
+        onClick={() => router.back()}
+        aria-label="חזור"
+        className="self-end text-[#0D9488] text-[17px] font-medium mb-4 min-h-[44px] flex items-center"
+      >
+        →
+      </button>
       <h1 className="text-[22px] font-bold text-[#111827] text-right mb-8">
         {COPY.pageTitle}
       </h1>

@@ -107,7 +107,7 @@ export default function LeaguePage(): React.ReactElement {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setJoining(false); return; }
 
     // Insert — ignore conflict if already a member
     await supabase
@@ -168,7 +168,8 @@ export default function LeaguePage(): React.ReactElement {
           }}
           placeholder={COPY.joinPlaceholder}
           maxLength={6}
-          className={`flex-1 h-12 rounded-xl border px-4 text-right text-[15px] bg-white outline-none focus:border-[#0D9488] transition-colors ${
+          dir="ltr"
+          className={`flex-1 h-12 rounded-xl border px-4 text-center text-[15px] bg-white outline-none focus:border-[#0D9488] transition-colors ${
             joinError ? "border-[#E24B4A]" : "border-[#E5E7EB]"
           }`}
         />

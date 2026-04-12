@@ -65,17 +65,8 @@ export default function TournamentPage(): React.ReactElement {
         .order("kickoff_at", { ascending: true }),
     ]);
 
-    if (standingsResult.error) {
-      console.error("Failed to load standings:", standingsResult.error);
-    } else if (standingsResult.data) {
-      setStandings(standingsResult.data);
-    }
-
-    if (matchesResult.error) {
-      console.error("Failed to load knockout matches:", matchesResult.error);
-    } else if (matchesResult.data) {
-      setKnockoutMatches(matchesResult.data as KnockoutMatch[]);
-    }
+    if (standingsResult.data) setStandings(standingsResult.data);
+    if (matchesResult.data) setKnockoutMatches(matchesResult.data as KnockoutMatch[]);
 
     setLoading(false);
   }, [supabase]);

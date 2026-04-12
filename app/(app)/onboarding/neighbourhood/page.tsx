@@ -24,6 +24,7 @@ export default function NeighbourhoodPage(): React.ReactElement {
   const [neighbourhoods, setNeighbourhoods] = useState<Neighbourhood[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     supabase
@@ -32,8 +33,9 @@ export default function NeighbourhoodPage(): React.ReactElement {
       .order("display_order")
       .then(({ data }) => {
         if (data) setNeighbourhoods(data);
+        setLoading(false);
       });
-  }, []);
+  }, [supabase]);
 
   async function handleContinue(): Promise<void> {
     if (!selectedId) return;
@@ -73,6 +75,11 @@ export default function NeighbourhoodPage(): React.ReactElement {
 
       {/* Neighbourhood grid */}
       <div className="grid grid-cols-2 gap-3 mb-8 flex-1">
+        {loading ? (
+          <div className="col-span-2 flex items-center justify-center py-12">
+            <div className="w-8 h-8 border-2 border-[#0D9488] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : null}
         {neighbourhoods.map((hood) => {
           const isSelected = selectedId === hood.id;
           return (
@@ -113,7 +120,8 @@ export default function NeighbourhoodPage(): React.ReactElement {
         </button>
         <button
           onClick={handleSkip}
-          className="text-[15px] text-[#6B7280] underline"
+          aria-label="דלג על בחירת שכונה"
+          className="text-[15px] text-[#6B7280] underline min-h-[44px] px-4 flex items-center"
         >
           {COPY.btnSkip}
         </button>
