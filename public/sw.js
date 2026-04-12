@@ -48,6 +48,9 @@ self.addEventListener("fetch", (event) => {
   // Never cache Supabase edge function calls
   if (url.pathname.startsWith("/functions/")) return;
 
+  // Never cache the web app manifest — it must always be fresh
+  if (url.pathname === "/manifest.webmanifest") return;
+
   // Navigation requests: network first, fall back to offline page
   if (request.mode === "navigate") {
     event.respondWith(
@@ -71,9 +74,9 @@ self.addEventListener("fetch", (event) => {
       caches.match(request).then((cached) => {
         const networkFetch = fetch(request).then((response) => {
           if (response.ok) {
-            caches
-              .open(STATIC_CACHE)
-              .then((cache) => cache.put(request, response.clone()));
+            // clone() must be called synchronously before the body is consumed
+            const clone = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));
           }
           return response;
         });
@@ -88,9 +91,9 @@ self.addEventListener("fetch", (event) => {
     fetch(request)
       .then((response) => {
         if (response.ok) {
-          caches
-            .open(RUNTIME_CACHE)
-            .then((cache) => cache.put(request, response.clone()));
+          // clone() must be called synchronously before the body is consumed
+          const clone = response.clone();
+          caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, clone));
         }
         return response;
       })
