@@ -38,6 +38,7 @@ const COPY = {
   toastError: "שגיאה בשמירה, נסה שוב",
   matchLocked: "המשחק נעול. לא ניתן לשנות ניחוש",
   noMatches: "אין משחקים קרובים",
+  moreGamesComingSoon: "משחקים נוספים יתעדכנו בהמשך ⚽",
   dateToday: "היום",
 };
 
@@ -301,35 +302,40 @@ export default function DashboardPage(): React.ReactElement {
         ) : matches.length === 0 ? (
           <div className="flex-1 flex items-center justify-center"><p className="text-[15px] text-[#9CA3AF]">{COPY.noMatches}</p></div>
         ) : (
-          dateKeys.map((dateKey) => (
-            <div key={dateKey} className="flex flex-col gap-3">
-              <p className="text-[13px] font-medium text-[#6B7280] text-right">
-                {formatDateLabel(dateKey)}
-              </p>
-              {grouped.get(dateKey)!.map((match) => {
-                const prediction = predictions.get(match.id) ?? null;
-                return (
-                  <MatchCard
-                    key={match.id}
-                    matchId={match.id}
-                    teamA={match.team_a}
-                    teamB={match.team_b}
-                    teamACode={match.team_a_code}
-                    teamBCode={match.team_b_code}
-                    kickoffAt={new Date(match.kickoff_at)}
-                    status={match.status}
-                    scoreA={match.score_a}
-                    scoreB={match.score_b}
-                    predictedA={prediction?.predicted_a ?? null}
-                    predictedB={prediction?.predicted_b ?? null}
-                    pointsAwarded={prediction?.points_awarded ?? null}
-                    isLocked={prediction?.is_locked ?? false}
-                    onSave={handleSave}
-                  />
-                );
-              })}
-            </div>
-          ))
+          <>
+            {dateKeys.map((dateKey) => (
+              <div key={dateKey} className="flex flex-col gap-3">
+                <p className="text-[13px] font-medium text-[#6B7280] text-right">
+                  {formatDateLabel(dateKey)}
+                </p>
+                {grouped.get(dateKey)!.map((match) => {
+                  const prediction = predictions.get(match.id) ?? null;
+                  return (
+                    <MatchCard
+                      key={match.id}
+                      matchId={match.id}
+                      teamA={match.team_a}
+                      teamB={match.team_b}
+                      teamACode={match.team_a_code}
+                      teamBCode={match.team_b_code}
+                      kickoffAt={new Date(match.kickoff_at)}
+                      status={match.status}
+                      scoreA={match.score_a}
+                      scoreB={match.score_b}
+                      predictedA={prediction?.predicted_a ?? null}
+                      predictedB={prediction?.predicted_b ?? null}
+                      pointsAwarded={prediction?.points_awarded ?? null}
+                      isLocked={prediction?.is_locked ?? false}
+                      onSave={handleSave}
+                    />
+                  );
+                })}
+              </div>
+            ))}
+            <p className="text-[13px] text-[#9CA3AF] text-center py-2">
+              {COPY.moreGamesComingSoon}
+            </p>
+          </>
         )}
       </div>
 
