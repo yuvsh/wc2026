@@ -93,20 +93,38 @@ export default function DashboardPage(): React.ReactElement {
     if (authError || !user) { setLoading(false); return; }
     setUserId(user.id);
 
-    // Fetch upcoming + live matches only (finished ones live in history tab)
+    // Group stage ends after last group match (June 28 00:00 UTC).
+    // Show only group stage until then; switch to knockout stages after.
+    const GROUP_STAGE_END = new Date("2026-06-28T00:00:00Z");
+    const activeStages = new Date() < GROUP_STAGE_END
+      ? ["group"]
+      : ["r32", "r16", "qf", "sf", "final"];
+
     const cutoff = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
-    const { data: matchData } = await supabase
+    const { data: allUpcoming } = await supabase
       .from("matches")
       .select("id, team_a, team_b, team_a_code, team_b_code, kickoff_at, status, score_a, score_b")
       .neq("status", "cancelled")
       .neq("status", "finished")
       .gte("kickoff_at", cutoff)
+      .in("stage", activeStages)
       .order("kickoff_at", { ascending: true });
 
-    if (matchData) setMatches(matchData);
+    // Show only the next 7-day window starting from the earliest upcoming match.
+    // This displays one round at a time instead of the full schedule.
+    let matchData: typeof allUpcoming = [];
+    if (allUpcoming && allUpcoming.length > 0) {
+      const firstKickoff = new Date(allUpcoming[0].kickoff_at);
+      const windowEnd = new Date(firstKickoff.getTime() + 7 * 24 * 60 * 60 * 1000);
+      matchData = allUpcoming.filter(
+        (m) => new Date(m.kickoff_at) <= windowEnd
+      );
+    }
+
+    setMatches(matchData ?? []);
 
     // Fetch predictions only for the visible matches
-    const matchIds = matchData?.map((m) => m.id) ?? [];
+    const matchIds = matchData.map((m) => m.id);
     const { data: predData } = await supabase
       .from("predictions")
       .select("match_id, predicted_a, predicted_b, points_awarded, is_locked")
