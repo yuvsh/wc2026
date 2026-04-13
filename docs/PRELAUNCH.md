@@ -14,17 +14,18 @@ Complete all items before the tournament opens for predictions.
   5. `20250611000005_fix_predictions_rls.sql`
   6. `20260412000001_cron_schedules.sql`
   7. `20260412000002_scoring_rpcs.sql`
+  8. `20260412000003_seed_matches.sql`
+  9. `20260412000004_seed_group_standings.sql`
 
 ---
 
-## 2. Supabase — Database Settings (required before cron migration)
+## 2. Supabase — Cron Migration (inline credentials)
 
-Run this in SQL Editor **before** applying `20260412000001_cron_schedules.sql`:
+The cron migration (`20260412000001_cron_schedules.sql`) uses hardcoded URLs.
+Before running it in SQL Editor, replace `__SERVICE_ROLE_KEY__` with your actual
+service role key (Dashboard → Settings → API → service_role).
 
-```sql
-ALTER DATABASE postgres SET app.supabase_url = 'https://<your-project>.supabase.co';
-ALTER DATABASE postgres SET app.service_role_key = '<your-service-role-key>';
-```
+**Do not commit the file with the real key in it.**
 
 ---
 
@@ -36,7 +37,7 @@ Set these in Dashboard → Edge Functions → Secrets:
 |---|---|
 | `API_FOOTBALL_KEY` | Your API-Football key from api-football.com |
 
-> **Important:** Confirm the correct WC 2026 league ID with API-Football before launch. `league=1` is UEFA Champions League — the FIFA World Cup ID is different. Update the URL in `sync-schedule/index.ts` and `poll-results/index.ts`.
+> **Confirmed:** `league=1` is "World Cup" in API-Football v3 (verified April 2026). No change needed in `sync-schedule/index.ts` or `poll-results/index.ts`.
 
 ---
 
@@ -56,14 +57,13 @@ supabase functions deploy resolve-golden-boot
 
 ## 5. Populate Match Schedule
 
-After deploying `sync-schedule`, run it once manually to populate all 104 matches:
-
-```bash
-curl -X POST https://<your-project>.supabase.co/functions/v1/sync-schedule \
-  -H "Authorization: Bearer <your-service-role-key>"
-```
+All 104 matches are seeded via `20260412000003_seed_matches.sql` (step 1.8 above).
+Group stage and knockout TBD placeholders are included.
 
 Verify via SQL: `SELECT COUNT(*) FROM matches;` — should return 104.
+
+Once the tournament starts and API-Football has 2026 data, `sync-schedule` and `poll-results`
+will update scores and resolve knockout TBDs automatically via cron.
 
 ---
 

@@ -41,30 +41,31 @@ const COPY = {
   dateToday: "היום",
 };
 
-function formatDateLabel(dateStr: string): string {
-  const date = new Date(dateStr);
-  const today = new Date();
-  const isToday =
-    date.toDateString() === today.toDateString();
+// Returns YYYY-MM-DD in Israel timezone — sorts lexicographically as dates
+function toIsraelDateKey(kickoffAt: string): string {
+  return new Date(kickoffAt).toLocaleDateString("sv-SE", {
+    timeZone: "Asia/Jerusalem",
+  });
+}
 
-  if (isToday) return COPY.dateToday;
+function formatDateLabel(isoDate: string): string {
+  const todayKey = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jerusalem" });
+  if (isoDate === todayKey) return COPY.dateToday;
 
-  return date.toLocaleDateString("he-IL", {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("he-IL", {
     weekday: "long",
     day: "numeric",
     month: "numeric",
-    timeZone: "Asia/Jerusalem",
   });
 }
 
 function groupByDate(matches: Match[]): Map<string, Match[]> {
   const groups = new Map<string, Match[]>();
   for (const match of matches) {
-    const date = new Date(match.kickoff_at).toLocaleDateString("he-IL", {
-      timeZone: "Asia/Jerusalem",
-    });
-    if (!groups.has(date)) groups.set(date, []);
-    groups.get(date)!.push(match);
+    const key = toIsraelDateKey(match.kickoff_at);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(match);
   }
   return groups;
 }
@@ -236,11 +237,11 @@ export default function DashboardPage(): React.ReactElement {
   const grouped = groupByDate(matches);
   const dateKeys = Array.from(grouped.keys());
 
-  // Sort: today first
-  const today = new Date().toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" });
+  // YYYY-MM-DD keys sort lexicographically; pin today to top
+  const todayKey = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jerusalem" });
   dateKeys.sort((a, b) => {
-    if (a === today) return -1;
-    if (b === today) return 1;
+    if (a === todayKey) return -1;
+    if (b === todayKey) return 1;
     return a.localeCompare(b);
   });
 
