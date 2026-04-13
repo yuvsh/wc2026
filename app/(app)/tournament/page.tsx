@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import GroupTable from "@/components/GroupTable";
 import KnockoutBracket from "@/components/KnockoutBracket";
@@ -43,7 +43,7 @@ const COPY = {
 };
 
 export default function TournamentPage(): React.ReactElement {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [tab, setTab] = useState<TabType>("groups");
   const [standings, setStandings] = useState<GroupStandingRow[]>([]);

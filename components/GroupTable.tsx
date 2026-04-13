@@ -57,10 +57,10 @@ export default function GroupTable({ groupName, rows }: GroupTableProps): React.
               isQualified ? "bg-[#F0FDFA]" : "bg-white"
             }`}
           >
-            {/* Team name + flag */}
-            <div className="flex items-center gap-2 justify-end">
-              <span className="text-[13px] font-medium text-[#111827] truncate">{row.team_name}</span>
+            {/* Team name + flag — flag first so it appears rightmost in RTL flex */}
+            <div className="flex items-center gap-2 justify-start">
               <FlagIcon code={row.team_code} />
+              <span className="text-[13px] font-medium text-[#111827] truncate">{row.team_name}</span>
             </div>
             {/* Stats */}
             <span className="text-[13px] text-[#6B7280] text-center tabular-nums">{row.played}</span>
