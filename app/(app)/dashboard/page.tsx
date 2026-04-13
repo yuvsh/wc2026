@@ -37,7 +37,7 @@ const COPY = {
   toastSaved: "הניחוש נשמר ✓",
   toastError: "שגיאה בשמירה, נסה שוב",
   matchLocked: "המשחק נעול. לא ניתן לשנות ניחוש",
-  noMatches: "אין משחקים היום",
+  noMatches: "אין משחקים קרובים",
   dateToday: "היום",
 };
 
@@ -93,20 +93,25 @@ export default function DashboardPage(): React.ReactElement {
     if (authError || !user) { setLoading(false); return; }
     setUserId(user.id);
 
-    // Fetch matches (exclude cancelled)
+    // Fetch upcoming + live matches only (finished ones live in history tab)
+    const cutoff = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
     const { data: matchData } = await supabase
       .from("matches")
       .select("id, team_a, team_b, team_a_code, team_b_code, kickoff_at, status, score_a, score_b")
       .neq("status", "cancelled")
+      .neq("status", "finished")
+      .gte("kickoff_at", cutoff)
       .order("kickoff_at", { ascending: true });
 
     if (matchData) setMatches(matchData);
 
-    // Fetch predictions
+    // Fetch predictions only for the visible matches
+    const matchIds = matchData?.map((m) => m.id) ?? [];
     const { data: predData } = await supabase
       .from("predictions")
       .select("match_id, predicted_a, predicted_b, points_awarded, is_locked")
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .in("match_id", matchIds.length > 0 ? matchIds : ["00000000-0000-0000-0000-000000000000"]);
 
     if (predData) {
       const predMap = new Map<string, Prediction>();
