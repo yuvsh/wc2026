@@ -15,16 +15,16 @@ interface Player {
 
 const COPY = {
   title: "מלך השערים",
-  subtitle: "בחר את מלך השערים שלך לפני תחילת הטורניר",
-  lockLabel: "נועל בעוד",
+  subtitle: "על מי אתה מהמר? בחר לפני שהטורניר מתחיל",
+  lockLabel: "ננעל בעוד",
   lockedTitle: "הבחירה נעולה",
-  lockedSubtitle: "הטורניר התחיל — לא ניתן לשנות בחירה",
+  lockedSubtitle: "הטורניר התחיל — הבחירה נעולה",
   confirmButton: "אשר בחירה",
   changeButton: "שנה בחירה",
   saving: "שומר...",
   savedToast: "הבחירה נשמרה ✓",
-  errorToast: "שגיאה בשמירה, נסה שוב",
-  noSelection: "בחר שחקן מהרשימה",
+  errorToast: "משהו השתבש, נסה שוב",
+  noSelection: "בחר שחקן",
   back: "→",
 };
 

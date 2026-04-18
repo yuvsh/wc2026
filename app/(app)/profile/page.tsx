@@ -19,15 +19,10 @@ interface Neighbourhood {
   name: string;
 }
 
-interface League {
+interface LeagueEntry {
   league_id: string;
-  leagues: {
-    name: string;
-    invite_code: string;
-  } | {
-    name: string;
-    invite_code: string;
-  }[];
+  name: string;
+  invite_code: string;
 }
 
 interface UserStats {
@@ -45,19 +40,20 @@ const COPY = {
   sectionSettings: "הגדרות",
   labelDisplayName: "שם תצוגה",
   labelNeighbourhood: "שכונה",
-  labelNeighbourhoodLocked: "שכונה (נעול)",
+  labelNeighbourhoodLocked: "שכונה",
   neighbourhoodNone: "לא נבחרה",
-  neighbourhoodLocked: "לא ניתן לשנות לאחר תחילת הטורניר",
+  neighbourhoodLocked: "הטורניר התחיל — לא ניתן לשנות",
   sectionLeagues: "ליגות",
   globalLeagueBadge: "כל המשתתפים",
+  globalLeagueSublabel: "כולם משחקים",
   inviteCode: "קוד הזמנה",
-  joinOrCreate: "הצטרף או צור ליגה חדשה",
-  noLeagues: "אינך חבר בליגה",
+  joinOrCreate: "הצטרף לליגה או צור אחת",
+  noLeagues: "עדיין לא בליגה",
   save: "שמור",
   saving: "שומר...",
   cancel: "ביטול",
   savedToast: "השם עודכן ✓",
-  errorToast: "שגיאה בשמירה, נסה שוב",
+  errorToast: "משהו השתבש, נסה שוב",
   copyToast: "קוד הועתק ✓",
   logout: "התנתק",
   version: (v: string) => `גרסה ${v}`,
@@ -96,7 +92,7 @@ function SettingsRow({
       aria-label={`${label}: ${value}`}
       className="w-full flex items-center justify-between px-4 py-3.5 bg-white border-b border-[#F3F4F6] last:border-b-0 disabled:opacity-60 text-right"
     >
-      <span className={`text-[15px] ${disabled ? "text-[#9CA3AF]" : "text-[#0D9488]"}`}>
+      <span aria-hidden="true" className={`text-[15px] ${disabled ? "text-[#9CA3AF]" : "text-[#0D9488]"}`}>
         {!disabled && onTap ? "‹" : ""}
       </span>
       <div className="flex flex-col items-end gap-0.5">
@@ -114,7 +110,7 @@ export default function ProfilePage(): React.ReactElement {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [neighbourhood, setNeighbourhood] = useState<Neighbourhood | null>(null);
-  const [leagues, setLeagues] = useState<League[]>([]);
+  const [leagues, setLeagues] = useState<LeagueEntry[]>([]);
   const [stats, setStats] = useState<UserStats>({ totalPoints: 0, bingoCount: 0, rank: null });
   const [loading, setLoading] = useState(true);
 
@@ -135,15 +131,17 @@ export default function ProfilePage(): React.ReactElement {
       if (authError || !user) { setLoading(false); return; }
       setUserId(user.id);
 
-      const [profileResult, leaguesResult, predictionsResult] = await Promise.all([
+      const [profileResult, membershipsResult, predictionsResult] = await Promise.all([
         supabase
           .from("users")
           .select("display_name, provider, neighbourhood_id, hood_locked")
           .eq("id", user.id)
           .single(),
+        // Two-step league load: memberships first, then league details separately
+        // (avoid nested joins — RLS on both tables silently returns null for nested rows)
         supabase
           .from("league_members")
-          .select("league_id, leagues(name, invite_code)")
+          .select("league_id")
           .eq("user_id", user.id),
         supabase
           .from("predictions")
@@ -166,18 +164,34 @@ export default function ProfilePage(): React.ReactElement {
         }
       }
 
-      if (leaguesResult.data) {
-        setLeagues(leaguesResult.data as League[]);
+      if (membershipsResult.data && membershipsResult.data.length > 0) {
+        const leagueIds = membershipsResult.data.map((m) => m.league_id);
 
-        if (leaguesResult.data.length > 0) {
-          const firstLeagueId = leaguesResult.data[0].league_id;
-          const { data: members } = await supabase
+        const { data: leagueRows, error: leagueError } = await supabase
+          .from("leagues")
+          .select("id, name, invite_code")
+          .in("id", leagueIds);
+
+        if (leagueError) {
+          // League load failed — user still sees the rest of the profile
+        } else if (leagueRows && leagueRows.length > 0) {
+          const entries: LeagueEntry[] = leagueRows.map((row) => ({
+            league_id: row.id as string,
+            name: row.name as string,
+            invite_code: row.invite_code as string,
+          }));
+          setLeagues(entries);
+
+          // Rank: use first non-global league for ranking context; fall back to global
+          const rankLeagueId = entries.find((e) => e.league_id !== GLOBAL_LEAGUE_ID)?.league_id
+            ?? entries[0].league_id;
+          const { data: members, error: rankError } = await supabase
             .from("league_members")
             .select("user_id, total_points")
-            .eq("league_id", firstLeagueId)
+            .eq("league_id", rankLeagueId)
             .order("total_points", { ascending: false });
 
-          if (members) {
+          if (!rankError && members) {
             const pos = members.findIndex((m) => m.user_id === user.id) + 1;
             setStats((prev) => ({ ...prev, rank: pos > 0 ? pos : null }));
           }
@@ -233,11 +247,6 @@ export default function ProfilePage(): React.ReactElement {
     } finally {
       setSaving(false);
     }
-  }
-
-  function getLeague(entry: League): { name: string; invite_code: string } | null {
-    const l = Array.isArray(entry.leagues) ? entry.leagues[0] : entry.leagues;
-    return l ?? null;
   }
 
   async function copyInviteCode(code: string): Promise<void> {
@@ -345,8 +354,6 @@ export default function ProfilePage(): React.ReactElement {
             <p className="text-[14px] text-[#9CA3AF] px-4 py-3 text-right">{COPY.noLeagues}</p>
           ) : (
             leagues.map((entry) => {
-              const league = getLeague(entry);
-              if (!league) return null;
               const isGlobal = entry.league_id === GLOBAL_LEAGUE_ID;
               return (
                 <div
@@ -359,18 +366,18 @@ export default function ProfilePage(): React.ReactElement {
                     </span>
                   ) : (
                     <button
-                      onClick={() => copyInviteCode(league.invite_code)}
-                      aria-label={`העתק קוד הזמנה: ${league.invite_code}`}
+                      onClick={() => copyInviteCode(entry.invite_code)}
+                      aria-label={`העתק קוד הזמנה: ${entry.invite_code}`}
                       className="text-[13px] text-[#0D9488] font-mono bg-[#F0FDFA] px-2 py-1 rounded-lg min-h-[44px] flex items-center"
                     >
-                      {league.invite_code}
+                      {entry.invite_code}
                     </button>
                   )}
                   <div className="flex flex-col items-end gap-0.5">
-                    <span className="text-[15px] font-medium text-[#111827]">{league.name}</span>
-                    {!isGlobal && (
-                      <span className="text-[12px] text-[#9CA3AF]">{COPY.inviteCode}</span>
-                    )}
+                    <span className="text-[15px] font-medium text-[#111827]">{entry.name}</span>
+                    <span className="text-[12px] text-[#9CA3AF]">
+                      {isGlobal ? COPY.globalLeagueSublabel : COPY.inviteCode}
+                    </span>
                   </div>
                 </div>
               );
@@ -379,10 +386,10 @@ export default function ProfilePage(): React.ReactElement {
           <Link
             href="/onboarding/league"
             aria-label="הצטרף או צור ליגה חדשה"
-            className="flex items-center justify-end gap-2 px-4 py-3 border-t border-[#F3F4F6] text-[14px] text-[#0D9488] font-medium"
+            className="flex items-center justify-end gap-2 px-4 py-3 border-t border-[#E5E7EB] text-[14px] text-[#0D9488] font-medium"
           >
             {COPY.joinOrCreate}
-            <span>‹</span>
+            <span aria-hidden="true">‹</span>
           </Link>
         </div>
       </div>

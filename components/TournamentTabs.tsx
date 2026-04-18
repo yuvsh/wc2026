@@ -19,8 +19,8 @@ type TabType = "groups" | "knockout";
 
 const COPY = {
   tabGroups: "בתים",
-  tabKnockout: "סבב פלאיאוף",
-  emptyGroups: "נתוני הבתים יתעדכנו לאחר תחילת הטורניר",
+  tabKnockout: "נוקאאוט",
+  emptyGroups: "הבתים יתמלאו עם תחילת הטורניר",
 };
 
 const TAB_IDS: Record<TabType, string> = {

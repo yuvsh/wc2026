@@ -7,7 +7,7 @@ interface KnockoutBracketProps {
 type Stage = "r32" | "r16" | "qf" | "sf" | "final";
 
 const COPY = {
-  emptyStages: "שלב הנוקאאוט טרם החל",
+  emptyStages: "שלב הנוקאאוט עוד לא התחיל",
 };
 
 const STAGE_LABELS: Record<Stage, { he: string; en: string }> = {

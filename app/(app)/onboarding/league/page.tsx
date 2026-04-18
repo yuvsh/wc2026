@@ -17,11 +17,11 @@ interface LeagueMemberRow {
 }
 
 const COPY = {
-  greeting: (name: string) => `שלום, ${name} 👋`,
+  greeting: (name: string) => `היי ${name} 👋`,
   createTitle: "צור ליגה",
-  createDesc: "קבל קוד הזמנה ושתף עם החברים",
+  createDesc: "קבל קוד הזמנה ושתף עם חברים",
   divider: "או",
-  joinPlaceholder: "הכנס קוד — A4X9K2",
+  joinPlaceholder: "קוד הזמנה — A4X9K2",
   joinBtn: "הצטרף",
   joinError: "קוד לא תקין, נסה שוב",
   myLeagues: "הליגות שלי",

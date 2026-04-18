@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -14,12 +14,27 @@ const COPY = {
   title: "באיזו שכונה אתה גר?",
   subtitle: "תוכל לשנות זאת בפרופיל עד תחילת הטורניר",
   btnContinue: "המשך",
-  btnSkip: "דלג, אבחר מאוחר יותר",
+  btnSkip: "דלג — אבחר אחר כך",
+  errorLoad: "שגיאה בטעינת השכונות",
+  errorSave: "משהו השתבש, נסה שוב",
+  btnRetry: "נסה שוב",
 };
+
+// Only allow redirects to known internal paths to prevent open redirect attacks
+const ALLOWED_REDIRECTS = ["/profile", "/onboarding/league"] as const;
+type AllowedRedirect = (typeof ALLOWED_REDIRECTS)[number];
+
+function isSafeRedirect(value: string | null): value is AllowedRedirect {
+  return ALLOWED_REDIRECTS.includes(value as AllowedRedirect);
+}
 
 export default function NeighbourhoodPage(): React.ReactElement {
   return (
-    <Suspense>
+    <Suspense fallback={
+      <div className="flex-1 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#0D9488] border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
       <NeighbourhoodPageContent />
     </Suspense>
   );
@@ -28,50 +43,88 @@ export default function NeighbourhoodPage(): React.ReactElement {
 function NeighbourhoodPageContent(): React.ReactElement {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect");
-  const supabase = createClient();
+  const rawRedirect = searchParams.get("redirect");
+  const redirectTo: AllowedRedirect = isSafeRedirect(rawRedirect) ? rawRedirect : "/onboarding/league";
+
+  const supabase = useMemo(() => createClient(), []);
 
   const [neighbourhoods, setNeighbourhoods] = useState<Neighbourhood[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [saveError, setSaveError] = useState(false);
 
-  useEffect(() => {
+  function fetchNeighbourhoods(): void {
+    setLoading(true);
+    setLoadError(false);
     supabase
       .from("neighbourhoods")
       .select("*")
       .order("display_order")
-      .then(({ data }) => {
-        if (data) setNeighbourhoods(data);
+      .then(({ data, error }) => {
+        if (error) {
+          setLoadError(true);
+        } else if (data) {
+          setNeighbourhoods(data);
+        }
         setLoading(false);
       });
+  }
+
+  useEffect(() => {
+    fetchNeighbourhoods();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase]);
 
   async function handleContinue(): Promise<void> {
     if (!selectedId) return;
     setSaving(true);
+    setSaveError(false);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase
-          .from("users")
-          .update({ neighbourhood_id: selectedId })
-          .eq("id", user.id);
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        setSaveError(true);
+        return;
       }
-      router.push(redirectTo ?? "/onboarding/league");
+      const { error: updateError } = await supabase
+        .from("users")
+        .update({ neighbourhood_id: selectedId })
+        .eq("id", user.id);
+
+      if (updateError) {
+        setSaveError(true);
+        return;
+      }
+      router.push(redirectTo);
     } finally {
       setSaving(false);
     }
   }
 
   function handleSkip(): void {
-    router.push(redirectTo ?? "/onboarding/league");
+    router.push(redirectTo);
   }
 
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-[#0D9488] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4">
+        <p className="text-[15px] text-[#6B7280]">{COPY.errorLoad}</p>
+        <button
+          onClick={fetchNeighbourhoods}
+          aria-label="נסה לטעון מחדש"
+          className="text-[15px] text-[#0D9488] underline min-h-[44px] px-4 flex items-center"
+        >
+          {COPY.btnRetry}
+        </button>
       </div>
     );
   }
@@ -101,7 +154,9 @@ function NeighbourhoodPageContent(): React.ReactElement {
             <button
               key={hood.id}
               onClick={() => setSelectedId(hood.id)}
-              className={`relative rounded-xl p-4 text-right border transition-all ${
+              aria-label={`בחר שכונה: ${hood.name}`}
+              aria-pressed={isSelected}
+              className={`relative rounded-xl p-4 min-h-[44px] text-right border transition-all ${
                 isSelected
                   ? "bg-[#F0FDFA] border-[#0D9488]"
                   : "bg-white border-[#E5E7EB]"
@@ -126,6 +181,9 @@ function NeighbourhoodPageContent(): React.ReactElement {
 
       {/* Actions */}
       <div className="flex flex-col items-center gap-4">
+        {saveError && (
+          <p className="text-[14px] text-[#DC2626]">{COPY.errorSave}</p>
+        )}
         <button
           onClick={handleContinue}
           disabled={!selectedId || saving}

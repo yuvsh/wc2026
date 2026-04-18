@@ -7,7 +7,7 @@ const COPY = {
   appName: "Mundial",
   tagline: "נחש · תחרה · תנצח",
   btnGoogle: "המשך עם Google",
-  terms: "בהתחברות אתה מסכים ל",
+  terms: "בהתחברות, אתה מסכים ל",
   termsLink: "תנאי השימוש",
   and: " ו",
   privacyLink: "מדיניות הפרטיות",

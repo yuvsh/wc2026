@@ -24,14 +24,14 @@ export interface MatchCardProps {
 }
 
 const COPY = {
-  btnSave: "שמור ניחוש",
+  btnSave: "שמור",
   locked: "נעול",
   live: "חי",
-  lockLabel: "⏱ נועל בעוד",
+  lockLabel: "⏱ ננעל בעוד",
   bingo: "⚽ בינגו · 3 נקודות",
-  correct: "✓ תוצאה נכונה · 1 נקודה",
+  correct: "✓ כיוון נכון · 1 נקודה",
   miss: "✗ פספוס · 0 נקודות",
-  pending: "ממתין לתוצאה",
+  pending: "מחכים לתוצאה...",
   predictionLabel: (score: string) => `ניחוש שלך: ${score}`,
 };
 

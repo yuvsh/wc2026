@@ -8,12 +8,12 @@ import { useLeagues } from "@/hooks/useLeagues";
 import { useLeagueMembers } from "@/hooks/useLeagueMembers";
 
 const COPY = {
-  title: "טבלת דירוג",
+  title: "דירוג",
   tabPersonal: "אישי",
   tabHood: "שכונות",
   comingSoon: "בקרוב",
-  empty: "אין משתתפים עדיין",
-  noLeagues: "עוד לא הצטרפת לליגה",
+  empty: "הליגה עדיין ריקה — שתף את הקוד!",
+  noLeagues: "עדיין לא בליגה? צור אחת ←",
 };
 
 function getMemberName(m: ReturnType<typeof useLeagueMembers>["members"][number]): string {

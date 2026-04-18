@@ -10,7 +10,7 @@ const COPY = {
   leagueNameLabel: "שם הליגה",
   leagueNamePlaceholder: "למשל: ליגת רביבים 2026",
   createBtn: "צור ליגה",
-  inviteTitle: "הליגה שלך נוצרה!",
+  inviteTitle: "הליגה שלך מוכנה!",
   inviteSubtitle: "שתף את הקוד עם החברים",
   codeLabel: "קוד הזמנה",
   btnWhatsapp: "שתף בוואטסאפ",

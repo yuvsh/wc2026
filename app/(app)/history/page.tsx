@@ -11,9 +11,9 @@ const COPY = {
   title: "היסטוריה",
   filterAll: "הכל",
   filterBingo: "בינגו",
-  filterCorrect: "תוצאה נכונה",
+  filterCorrect: "ניחוש נכון",
   filterMiss: "פספוס",
-  empty: "אין משחקים עדיין",
+  empty: "עדיין אין משחקים שהסתיימו",
 };
 
 const FILTERS: { key: FilterType; label: string }[] = [

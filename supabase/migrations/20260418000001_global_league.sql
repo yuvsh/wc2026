@@ -21,16 +21,18 @@ create or replace function add_user_to_global_league()
 returns trigger
 language plpgsql
 security definer
+-- Explicit search_path prevents schema-poisoning attacks on SECURITY DEFINER functions
+set search_path = ''
 as $$
 begin
-  insert into league_members (league_id, user_id)
+  insert into public.league_members (league_id, user_id)
   values ('00000000-0000-0000-0000-000000000001', new.id)
   on conflict (league_id, user_id) do nothing;
   return new;
 end;
 $$;
 
-drop trigger if exists on_user_created_join_global on users;
+drop trigger if exists on_user_created_join_global on public.users;
 create trigger on_user_created_join_global
-  after insert on users
+  after insert on public.users
   for each row execute function add_user_to_global_league();

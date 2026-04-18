@@ -7,13 +7,13 @@ import MatchCard from "@/components/MatchCard";
 import { useUpcomingMatches, type Match, type Prediction } from "@/hooks/useUpcomingMatches";
 
 const COPY = {
-  goldenBootBanner: "חזה מי יהיה מלך השערים ←",
+  goldenBootBanner: "מי יהיה מלך השערים? נחש עכשיו ←",
   rank: "דירוג",
   points: (n: number) => `${n} נק'`,
   toastSaved: "הניחוש נשמר ✓",
-  toastError: "שגיאה בשמירה, נסה שוב",
-  matchLocked: "המשחק נעול. לא ניתן לשנות ניחוש",
-  noMatches: "אין משחקים קרובים",
+  toastError: "משהו השתבש, נסה שוב",
+  matchLocked: "המשחק כבר נעול — אי אפשר לשנות",
+  noMatches: "אין משחקים בקרוב — תחזור אחרי ההגרלה ⚽",
   moreGamesComingSoon: "משחקים נוספים יתעדכנו בהמשך ⚽",
   dateToday: "היום",
 };

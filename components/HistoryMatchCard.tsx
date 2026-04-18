@@ -15,7 +15,7 @@ interface HistoryMatchCardProps {
 
 const COPY = {
   bingo: "⚽ בינגו · 3 נקודות",
-  correct: "✓ תוצאה נכונה · 1 נקודה",
+  correct: "✓ כיוון נכון · 1 נקודה",
   miss: "✗ פספוס · 0 נקודות",
   predictionLabel: (a: number, b: number) => `ניחוש שלך: ${a}–${b}`,
 };
