@@ -5,10 +5,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 //
 // Request body: { "player_id": "<uuid of the winning player>" }
 //
-// Points awarded: 5 points to each user who predicted the correct player.
-// TODO: Confirm points value with product owner before running in production.
+// Points awarded: 10 points to each user who predicted the correct player.
 
-const GOLDEN_BOOT_POINTS = 5;
+const GOLDEN_BOOT_POINTS = 10;
 
 Deno.serve(async (req): Promise<Response> => {
   const authHeader = req.headers.get("Authorization");
