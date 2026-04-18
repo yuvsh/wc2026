@@ -5,24 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import HistoryStatsBar from "@/components/HistoryStatsBar";
 import HistoryMatchCard from "@/components/HistoryMatchCard";
 import { computeHistoryStats, filterByResult, type FilterType } from "@/lib/utils/historyStats";
-
-interface MatchData {
-  team_a: string;
-  team_b: string;
-  team_a_code: string;
-  team_b_code: string;
-  score_a: number;
-  score_b: number;
-  kickoff_at: string;
-}
-
-interface HistoryEntry {
-  match_id: string;
-  predicted_a: number;
-  predicted_b: number;
-  points_awarded: number;
-  matches: MatchData | MatchData[];
-}
+import { useMatchHistory } from "@/hooks/useMatchHistory";
 
 const COPY = {
   title: "היסטוריה",
@@ -40,63 +23,37 @@ const FILTERS: { key: FilterType; label: string }[] = [
   { key: "miss", label: COPY.filterMiss },
 ];
 
-function getMatch(entry: HistoryEntry) {
-  const m = Array.isArray(entry.matches) ? entry.matches[0] : entry.matches;
-  return m;
-}
-
 export default function HistoryPage(): React.ReactElement {
   const supabase = useMemo(() => createClient(), []);
-
-  const [entries, setEntries] = useState<HistoryEntry[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>("all");
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function load(): Promise<void> {
+    async function loadUser(): Promise<void> {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) { setLoading(false); return; }
-
-      const { data } = await supabase
-        .from("predictions")
-        .select(`
-          match_id,
-          predicted_a,
-          predicted_b,
-          points_awarded,
-          matches (
-            team_a, team_b, team_a_code, team_b_code,
-            score_a, score_b, kickoff_at
-          )
-        `)
-        .eq("user_id", user.id)
-        .not("points_awarded", "is", null)
-        .order("match_id", { ascending: false });
-
-      if (data) setEntries(data as unknown as HistoryEntry[]);
-      setLoading(false);
+      if (authError || !user) return;
+      setUserId(user.id);
     }
-    load();
-  }, []);
+    loadUser();
+  }, [supabase]);
 
+  const { entries, isLoading } = useMatchHistory(userId);
   const filtered = filterByResult(entries, filter);
 
   // Stats always computed from full unfiltered entries
   const { totalMatches, totalPoints, bingoCount, correctCount, missCount } =
     computeHistoryStats(entries);
 
-  // Group filtered entries by date (newest first)
-  const groupedMap = new Map<string, HistoryEntry[]>();
+  // Group filtered entries by date key (YYYY-MM-DD in Israel timezone, newest first)
+  const groupedMap = new Map<string, typeof entries>();
   for (const entry of filtered) {
-    const m = getMatch(entry);
-    if (!m) continue;
-    const date = new Date(m.kickoff_at).toLocaleDateString("he-IL", {
+    const dateKey = new Date(entry.match.kickoff_at).toLocaleDateString("sv-SE", {
       timeZone: "Asia/Jerusalem",
     });
-    if (!groupedMap.has(date)) groupedMap.set(date, []);
-    groupedMap.get(date)!.push(entry);
+    if (!groupedMap.has(dateKey)) groupedMap.set(dateKey, []);
+    groupedMap.get(dateKey)!.push(entry);
   }
-  const dateKeys = Array.from(groupedMap.keys()).reverse();
+  const dateKeys = Array.from(groupedMap.keys()).sort().reverse();
 
   return (
     <div className="flex-1 flex flex-col">
@@ -120,6 +77,7 @@ export default function HistoryPage(): React.ReactElement {
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
+            aria-label={f.label}
             className={`shrink-0 px-4 py-1.5 rounded-full text-[13px] font-medium transition-colors ${
               filter === f.key
                 ? "bg-[#0D9488] text-white"
@@ -133,7 +91,7 @@ export default function HistoryPage(): React.ReactElement {
 
       {/* Match list */}
       <div className="flex-1 px-4 py-4 flex flex-col gap-6">
-        {loading ? (
+        {isLoading ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="w-8 h-8 border-2 border-[#0D9488] border-t-transparent rounded-full animate-spin" />
           </div>
@@ -143,25 +101,21 @@ export default function HistoryPage(): React.ReactElement {
           dateKeys.map((dateKey) => (
             <div key={dateKey} className="flex flex-col gap-3">
               <p className="text-[13px] font-medium text-[#6B7280] text-right">{dateKey}</p>
-              {groupedMap.get(dateKey)!.map((entry) => {
-                const m = getMatch(entry);
-                if (!m) return null;
-                return (
-                  <HistoryMatchCard
-                    key={entry.match_id}
-                    teamA={m.team_a}
-                    teamB={m.team_b}
-                    teamACode={m.team_a_code}
-                    teamBCode={m.team_b_code}
-                    scoreA={m.score_a}
-                    scoreB={m.score_b}
-                    predictedA={entry.predicted_a}
-                    predictedB={entry.predicted_b}
-                    pointsAwarded={entry.points_awarded}
-                    kickoffAt={new Date(m.kickoff_at)}
-                  />
-                );
-              })}
+              {groupedMap.get(dateKey)!.map((entry) => (
+                <HistoryMatchCard
+                  key={entry.match_id}
+                  teamA={entry.match.team_a}
+                  teamB={entry.match.team_b}
+                  teamACode={entry.match.team_a_code}
+                  teamBCode={entry.match.team_b_code}
+                  scoreA={entry.match.score_a}
+                  scoreB={entry.match.score_b}
+                  predictedA={entry.predicted_a}
+                  predictedB={entry.predicted_b}
+                  pointsAwarded={entry.points_awarded}
+                  kickoffAt={new Date(entry.match.kickoff_at)}
+                />
+              ))}
             </div>
           ))
         )}

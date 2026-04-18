@@ -1,15 +1,4 @@
-interface KnockoutMatch {
-  id: string;
-  stage: "r32" | "r16" | "qf" | "sf" | "final";
-  team_a: string;
-  team_b: string;
-  team_a_code: string;
-  team_b_code: string;
-  score_a: number | null;
-  score_b: number | null;
-  kickoff_at: string;
-  status: string;
-}
+import type { KnockoutMatch } from "@/lib/types/tournament";
 
 interface KnockoutBracketProps {
   matches: KnockoutMatch[];

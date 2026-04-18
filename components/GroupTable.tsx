@@ -1,16 +1,4 @@
-interface GroupStandingRow {
-  id: string;
-  group_name: string;
-  team_name: string;
-  team_code: string;
-  position: number;
-  played: number;
-  won: number;
-  drawn: number;
-  lost: number;
-  points: number;
-  qualified: boolean;
-}
+import type { GroupStandingRow } from "@/lib/types/tournament";
 
 interface GroupTableProps {
   groupName: string;
@@ -49,7 +37,7 @@ export default function GroupTable({ groupName, rows }: GroupTableProps): React.
 
       {/* Rows */}
       {sorted.map((row) => {
-        const isQualified = row.position <= 2;
+        const isQualified = row.qualified;
         return (
           <div
             key={row.id}

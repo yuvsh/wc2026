@@ -1,34 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import MatchCard from "@/components/MatchCard";
-
-interface Match {
-  id: string;
-  team_a: string;
-  team_b: string;
-  team_a_code: string;
-  team_b_code: string;
-  kickoff_at: string;
-  status: "scheduled" | "live" | "finished" | "postponed" | "cancelled";
-  score_a: number | null;
-  score_b: number | null;
-}
-
-interface Prediction {
-  match_id: string;
-  predicted_a: number;
-  predicted_b: number;
-  points_awarded: number | null;
-  is_locked: boolean;
-}
-
-interface LeagueMember {
-  total_points: number;
-  league_id: string;
-}
+import { useUpcomingMatches, type Match, type Prediction } from "@/hooks/useUpcomingMatches";
 
 const COPY = {
   goldenBootBanner: "חזה מי יהיה מלך השערים ←",
@@ -74,127 +50,91 @@ function groupByDate(matches: Match[]): Map<string, Match[]> {
 export default function DashboardPage(): React.ReactElement {
   const supabase = useMemo(() => createClient(), []);
 
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [predictions, setPredictions] = useState<Map<string, Prediction>>(new Map());
+  const [userId, setUserId] = useState<string | null>(null);
   const [rank, setRank] = useState<number | null>(null);
   const [totalPoints, setTotalPoints] = useState<number>(0);
   const [showGoldenBootBanner, setShowGoldenBootBanner] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [userLoading, setUserLoading] = useState(true);
+
+  const { data, isLoading: matchesLoading, mutate } = useUpcomingMatches(userId);
+  const matches: Match[] = data?.matches ?? [];
+  const predictions: Map<string, Prediction> = data?.predictions ?? new Map();
+
+  const loading = userLoading || matchesLoading;
 
   function showToast(message: string): void {
     setToast(message);
     setTimeout(() => setToast(null), 2500);
   }
 
-  const loadData = useCallback(async (): Promise<void> => {
-    try {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) { setLoading(false); return; }
-    setUserId(user.id);
+  // Load user identity + rank + golden boot status
+  useEffect(() => {
+    async function loadUser(): Promise<void> {
+      try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError || !user) { setUserLoading(false); return; }
+        setUserId(user.id);
 
-    // Group stage ends after last group match (June 28 00:00 UTC).
-    // Show only group stage until then; switch to knockout stages after.
-    const GROUP_STAGE_END = new Date("2026-06-28T00:00:00Z");
-    const activeStages = new Date() < GROUP_STAGE_END
-      ? ["group"]
-      : ["r32", "r16", "qf", "sf", "final"];
+        const { data: memberData, error: memberError } = await supabase
+          .from("league_members")
+          .select("total_points, league_id")
+          .eq("user_id", user.id)
+          .limit(1)
+          .maybeSingle();
 
-    const cutoff = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
-    const { data: allUpcoming } = await supabase
-      .from("matches")
-      .select("id, team_a, team_b, team_a_code, team_b_code, kickoff_at, status, score_a, score_b")
-      .neq("status", "cancelled")
-      .neq("status", "finished")
-      .gte("kickoff_at", cutoff)
-      .in("stage", activeStages)
-      .order("kickoff_at", { ascending: true });
+        if (memberError) throw memberError;
 
-    // Show only the next 7-day window starting from the earliest upcoming match.
-    // This displays one round at a time instead of the full schedule.
-    let matchData: typeof allUpcoming = [];
-    if (allUpcoming && allUpcoming.length > 0) {
-      const firstKickoff = new Date(allUpcoming[0].kickoff_at);
-      const windowEnd = new Date(firstKickoff.getTime() + 7 * 24 * 60 * 60 * 1000);
-      matchData = allUpcoming.filter(
-        (m) => new Date(m.kickoff_at) <= windowEnd
-      );
-    }
+        if (memberData) {
+          setTotalPoints(memberData.total_points);
 
-    setMatches(matchData ?? []);
+          const { data: leagueMembers, error: leagueMembersError } = await supabase
+            .from("league_members")
+            .select("user_id, total_points")
+            .eq("league_id", memberData.league_id)
+            .order("total_points", { ascending: false });
 
-    // Fetch predictions only for the visible matches
-    const matchIds = matchData.map((m) => m.id);
-    const { data: predData } = await supabase
-      .from("predictions")
-      .select("match_id, predicted_a, predicted_b, points_awarded, is_locked")
-      .eq("user_id", user.id)
-      .in("match_id", matchIds.length > 0 ? matchIds : ["00000000-0000-0000-0000-000000000000"]);
+          if (leagueMembersError) throw leagueMembersError;
 
-    if (predData) {
-      const predMap = new Map<string, Prediction>();
-      predData.forEach((p) => predMap.set(p.match_id, p));
-      setPredictions(predMap);
-    }
+          if (leagueMembers) {
+            const position = leagueMembers.findIndex((m) => m.user_id === user.id) + 1;
+            setRank(position > 0 ? position : null);
+          }
+        }
 
-    // Fetch rank from first league
-    const { data: memberData } = await supabase
-      .from("league_members")
-      .select("total_points, league_id")
-      .eq("user_id", user.id)
-      .limit(1)
-      .maybeSingle();
+        const { data: gbData, error: gbError } = await supabase
+          .from("golden_boot_predictions")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
 
-    if (memberData) {
-      setTotalPoints(memberData.total_points);
+        if (gbError) throw gbError;
 
-      const { data: leagueMembers } = await supabase
-        .from("league_members")
-        .select("user_id, total_points")
-        .eq("league_id", memberData.league_id)
-        .order("total_points", { ascending: false });
-
-      if (leagueMembers) {
-        const position = leagueMembers.findIndex((m) => m.user_id === user.id) + 1;
-        setRank(position > 0 ? position : null);
+        setShowGoldenBootBanner(!gbData);
+      } catch {
+        showToast(COPY.toastError);
+      } finally {
+        setUserLoading(false);
       }
     }
-
-    // Check golden boot
-    const { data: gbData } = await supabase
-      .from("golden_boot_predictions")
-      .select("id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    setShowGoldenBootBanner(!gbData);
-    } catch {
-      showToast(COPY.toastError);
-    } finally {
-      setLoading(false);
-    }
+    loadUser();
   }, [supabase]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  // Realtime: match status changes
+  // Realtime: match status changes — trigger SWR revalidation
   useEffect(() => {
     const channel = supabase
       .channel("matches-changes")
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "matches" },
-        () => { loadData(); }
+        () => { mutate(); }
       )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [supabase, loadData]);
+  }, [supabase, mutate]);
 
-  // Realtime: prediction points updates
+  // Realtime: prediction points updates — trigger SWR revalidation
   useEffect(() => {
     if (!userId) return;
 
@@ -208,12 +148,12 @@ export default function DashboardPage(): React.ReactElement {
           table: "predictions",
           filter: `user_id=eq.${userId}`,
         },
-        () => { loadData(); }
+        () => { mutate(); }
       )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [supabase, userId, loadData]);
+  }, [supabase, userId, mutate]);
 
   async function handleSave(matchId: string, predictedA: number, predictedB: number): Promise<void> {
     if (!userId) return;
@@ -221,12 +161,25 @@ export default function DashboardPage(): React.ReactElement {
     const match = matches.find((m) => m.id === matchId);
     if (!match) return;
 
-    // Check if locked
     const lockTime = new Date(match.kickoff_at).getTime() - 5 * 60 * 1000;
     if (Date.now() >= lockTime) {
       showToast(COPY.matchLocked);
       return;
     }
+
+    // Optimistic update — show saved prediction immediately without waiting for refetch
+    const optimisticPredictions = new Map(predictions);
+    optimisticPredictions.set(matchId, {
+      match_id: matchId,
+      predicted_a: predictedA,
+      predicted_b: predictedB,
+      points_awarded: null,
+      is_locked: false,
+    });
+    mutate(
+      data ? { matches: data.matches, predictions: optimisticPredictions } : undefined,
+      { revalidate: false }
+    );
 
     const { error } = await supabase.from("predictions").upsert(
       {
@@ -240,20 +193,9 @@ export default function DashboardPage(): React.ReactElement {
 
     if (error) {
       showToast(COPY.toastError);
+      mutate(); // revert optimistic update
       return;
     }
-
-    setPredictions((prev) => {
-      const next = new Map(prev);
-      next.set(matchId, {
-        match_id: matchId,
-        predicted_a: predictedA,
-        predicted_b: predictedB,
-        points_awarded: null,
-        is_locked: false,
-      });
-      return next;
-    });
 
     showToast(COPY.toastSaved);
   }

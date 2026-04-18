@@ -5,8 +5,8 @@ interface HistoryMatchCardProps {
   teamB: string;
   teamACode: string;
   teamBCode: string;
-  scoreA: number;
-  scoreB: number;
+  scoreA: number | null;
+  scoreB: number | null;
   predictedA: number;
   predictedB: number;
   pointsAwarded: number;
@@ -81,11 +81,11 @@ export default function HistoryMatchCard({
         {/* Score */}
         <div className="flex items-center gap-2">
           <div className="w-[38px] h-[38px] rounded-lg bg-[#111827] flex items-center justify-center">
-            <span className="text-white text-[17px] font-bold">{scoreA}</span>
+            <span className="text-white text-[17px] font-bold">{scoreA ?? "—"}</span>
           </div>
           <span className="text-[#9CA3AF]">—</span>
           <div className="w-[38px] h-[38px] rounded-lg bg-[#111827] flex items-center justify-center">
-            <span className="text-white text-[17px] font-bold">{scoreB}</span>
+            <span className="text-white text-[17px] font-bold">{scoreB ?? "—"}</span>
           </div>
         </div>
 

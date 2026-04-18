@@ -22,5 +22,5 @@ export interface KnockoutMatch {
   score_a: number | null;
   score_b: number | null;
   kickoff_at: string;
-  status: string;
+  status: "scheduled" | "live" | "finished" | "postponed" | "cancelled";
 }

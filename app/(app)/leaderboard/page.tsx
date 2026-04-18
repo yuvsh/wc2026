@@ -4,25 +4,8 @@ import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Podium from "@/components/Podium";
 import LeaderboardRow from "@/components/LeaderboardRow";
-
-interface League {
-  id: string;
-  name: string;
-}
-
-interface Member {
-  user_id: string;
-  total_points: number;
-  users: {
-    display_name: string;
-    neighbourhood_id: string | null;
-    neighbourhoods: { name: string } | { name: string }[] | null;
-  } | {
-    display_name: string;
-    neighbourhood_id: string | null;
-    neighbourhoods: { name: string } | { name: string }[] | null;
-  }[];
-}
+import { useLeagues } from "@/hooks/useLeagues";
+import { useLeagueMembers } from "@/hooks/useLeagueMembers";
 
 const COPY = {
   title: "טבלת דירוג",
@@ -33,85 +16,45 @@ const COPY = {
   noLeagues: "עוד לא הצטרפת לליגה",
 };
 
+function getMemberName(m: ReturnType<typeof useLeagueMembers>["members"][number]): string {
+  const u = Array.isArray(m.users) ? m.users[0] : m.users;
+  return u?.display_name ?? "—";
+}
+
+function getNeighbourhood(m: ReturnType<typeof useLeagueMembers>["members"][number]): string | null {
+  const u = Array.isArray(m.users) ? m.users[0] : m.users;
+  if (!u) return null;
+  const n = u.neighbourhoods;
+  return Array.isArray(n) ? (n[0]?.name ?? null) : (n?.name ?? null);
+}
+
 export default function LeaderboardPage(): React.ReactElement {
   const supabase = useMemo(() => createClient(), []);
-
-  const [leagues, setLeagues] = useState<League[]>([]);
-  const [activeLeagueId, setActiveLeagueId] = useState<string | null>(null);
-  const [members, setMembers] = useState<Member[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [activeLeagueId, setActiveLeagueId] = useState<string | null>(null);
 
   useEffect(() => {
-    async function load(): Promise<void> {
+    async function loadUser(): Promise<void> {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) { setLoading(false); return; }
+      if (authError || !user) return;
       setUserId(user.id);
-
-      const { data: memberRows } = await supabase
-        .from("league_members")
-        .select("league_id")
-        .eq("user_id", user.id);
-
-      if (!memberRows || memberRows.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      const leagueIds = memberRows.map((r) => r.league_id);
-      const { data: leagueRows } = await supabase
-        .from("leagues")
-        .select("id, name")
-        .in("id", leagueIds);
-
-      if (leagueRows && leagueRows.length > 0) {
-        setLeagues(leagueRows);
-        setActiveLeagueId(leagueRows[0].id);
-      }
-
-      setLoading(false);
     }
-    load();
-  }, []);
+    loadUser();
+  }, [supabase]);
 
+  const { leagues, isLoading: leaguesLoading } = useLeagues(userId);
+  const { members, isLoading: membersLoading } = useLeagueMembers(activeLeagueId);
+
+  const loading = leaguesLoading || (!!activeLeagueId && membersLoading);
+
+  // Set first league as active once leagues load
   useEffect(() => {
-    if (!activeLeagueId) return;
-
-    async function loadMembers(): Promise<void> {
-      const { data } = await supabase
-        .from("league_members")
-        .select(`
-          user_id,
-          total_points,
-          users (
-            display_name,
-            neighbourhood_id,
-            neighbourhoods ( name )
-          )
-        `)
-        .eq("league_id", activeLeagueId)
-        .order("total_points", { ascending: false });
-
-      if (data) setMembers(data as Member[]);
+    if (leagues.length > 0 && !activeLeagueId) {
+      setActiveLeagueId(leagues[0].id);
     }
-
-    loadMembers();
-  }, [activeLeagueId]);
+  }, [leagues, activeLeagueId]);
 
   const top3 = members.slice(0, 3);
-  const rest = members.slice(3);
-
-  function getMemberName(m: Member): string {
-    const u = Array.isArray(m.users) ? m.users[0] : m.users;
-    return u?.display_name ?? "—";
-  }
-
-  function getNeighbourhood(m: Member): string | null {
-    const u = Array.isArray(m.users) ? m.users[0] : m.users;
-    if (!u) return null;
-    const n = u.neighbourhoods;
-    return Array.isArray(n) ? (n[0]?.name ?? null) : (n?.name ?? null);
-  }
 
   return (
     <div className="flex-1 flex flex-col">
@@ -150,6 +93,7 @@ export default function LeaderboardPage(): React.ReactElement {
                 <button
                   key={league.id}
                   onClick={() => setActiveLeagueId(league.id)}
+                  aria-label={league.name}
                   className={`shrink-0 px-4 py-1.5 rounded-full text-[13px] font-medium transition-colors ${
                     activeLeagueId === league.id
                       ? "bg-[#0D9488] text-white"
