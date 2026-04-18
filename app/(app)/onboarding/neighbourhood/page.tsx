@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 interface Neighbourhood {
@@ -18,7 +18,17 @@ const COPY = {
 };
 
 export default function NeighbourhoodPage(): React.ReactElement {
+  return (
+    <Suspense>
+      <NeighbourhoodPageContent />
+    </Suspense>
+  );
+}
+
+function NeighbourhoodPageContent(): React.ReactElement {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect");
   const supabase = createClient();
 
   const [neighbourhoods, setNeighbourhoods] = useState<Neighbourhood[]>([]);
@@ -48,14 +58,14 @@ export default function NeighbourhoodPage(): React.ReactElement {
           .update({ neighbourhood_id: selectedId })
           .eq("id", user.id);
       }
-      router.push("/onboarding/league");
+      router.push(redirectTo ?? "/onboarding/league");
     } finally {
       setSaving(false);
     }
   }
 
   function handleSkip(): void {
-    router.push("/onboarding/league");
+    router.push(redirectTo ?? "/onboarding/league");
   }
 
   if (loading) {

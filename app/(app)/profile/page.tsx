@@ -49,6 +49,7 @@ const COPY = {
   neighbourhoodNone: "לא נבחרה",
   neighbourhoodLocked: "לא ניתן לשנות לאחר תחילת הטורניר",
   sectionLeagues: "ליגות",
+  globalLeagueBadge: "כל המשתתפים",
   inviteCode: "קוד הזמנה",
   joinOrCreate: "הצטרף או צור ליגה חדשה",
   noLeagues: "אינך חבר בליגה",
@@ -62,6 +63,7 @@ const COPY = {
   version: (v: string) => `גרסה ${v}`,
 };
 
+const GLOBAL_LEAGUE_ID = "00000000-0000-0000-0000-000000000001";
 const APP_VERSION = "0.1.0";
 
 function StatCard({ value, label }: { value: string | number; label: string }): React.ReactElement {
@@ -328,7 +330,7 @@ export default function ProfilePage(): React.ReactElement {
           <SettingsRow
             label={profile?.hood_locked ? COPY.labelNeighbourhoodLocked : COPY.labelNeighbourhood}
             value={neighbourhood?.name ?? COPY.neighbourhoodNone}
-            onTap={profile?.hood_locked ? undefined : () => router.push("/onboarding/neighbourhood")}
+            onTap={profile?.hood_locked ? undefined : () => router.push("/onboarding/neighbourhood?redirect=/profile")}
             disabled={profile?.hood_locked}
             disabledHint={profile?.hood_locked ? COPY.neighbourhoodLocked : undefined}
           />
@@ -345,21 +347,30 @@ export default function ProfilePage(): React.ReactElement {
             leagues.map((entry) => {
               const league = getLeague(entry);
               if (!league) return null;
+              const isGlobal = entry.league_id === GLOBAL_LEAGUE_ID;
               return (
                 <div
                   key={entry.league_id}
                   className="flex items-center justify-between px-4 py-3 border-b border-[#F3F4F6] last:border-b-0"
                 >
-                  <button
-                    onClick={() => copyInviteCode(league.invite_code)}
-                    aria-label={`העתק קוד הזמנה: ${league.invite_code}`}
-                    className="text-[13px] text-[#0D9488] font-mono bg-[#F0FDFA] px-2 py-1 rounded-lg min-h-[44px] flex items-center"
-                  >
-                    {league.invite_code}
-                  </button>
+                  {isGlobal ? (
+                    <span className="text-[12px] text-[#0D9488] bg-[#F0FDFA] px-2 py-1 rounded-full">
+                      {COPY.globalLeagueBadge}
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => copyInviteCode(league.invite_code)}
+                      aria-label={`העתק קוד הזמנה: ${league.invite_code}`}
+                      className="text-[13px] text-[#0D9488] font-mono bg-[#F0FDFA] px-2 py-1 rounded-lg min-h-[44px] flex items-center"
+                    >
+                      {league.invite_code}
+                    </button>
+                  )}
                   <div className="flex flex-col items-end gap-0.5">
                     <span className="text-[15px] font-medium text-[#111827]">{league.name}</span>
-                    <span className="text-[12px] text-[#9CA3AF]">{COPY.inviteCode}</span>
+                    {!isGlobal && (
+                      <span className="text-[12px] text-[#9CA3AF]">{COPY.inviteCode}</span>
+                    )}
                   </div>
                 </div>
               );
