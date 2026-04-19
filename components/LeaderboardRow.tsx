@@ -4,6 +4,7 @@ interface LeaderboardRowProps {
   neighbourhoodName: string | null;
   totalPoints: number;
   isCurrentUser: boolean;
+  onClick?: () => void;
 }
 
 import { getInitials } from "@/lib/utils/initials";
@@ -30,14 +31,20 @@ export default function LeaderboardRow({
   neighbourhoodName,
   totalPoints,
   isCurrentUser,
+  onClick,
 }: LeaderboardRowProps): React.ReactElement {
   return (
     <div
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") onClick(); } : undefined}
+      aria-label={onClick ? displayName : undefined}
       className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors ${
         isCurrentUser
           ? "bg-[#F0FDFA] border-[#2DD4BF]"
           : "bg-white border-[#E5E7EB]"
-      }`}
+      } ${onClick ? "cursor-pointer active:opacity-70" : ""}`}
     >
       <PositionLabel position={position} />
 
@@ -73,6 +80,13 @@ export default function LeaderboardRow({
       >
         {totalPoints}
       </span>
+
+      {/* Chevron — only when row is tappable */}
+      {onClick && (
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 text-[#D1D5DB]">
+          <path d="M10 4L6 8l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
     </div>
   );
 }

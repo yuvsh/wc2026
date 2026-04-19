@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Podium from "@/components/Podium";
 import LeaderboardRow from "@/components/LeaderboardRow";
@@ -18,8 +19,21 @@ const COPY = {
 
 export default function LeaderboardPage(): React.ReactElement {
   const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const [activeLeagueId, setActiveLeagueId] = useState<string | null>(null);
+
+  const handleMemberClick = useCallback(
+    (memberId: string, memberName: string) => {
+      if (!activeLeagueId) return;
+      const params = new URLSearchParams({
+        leagueId: activeLeagueId,
+        name: memberName,
+      });
+      router.push(`/leaderboard/${memberId}?${params.toString()}`);
+    },
+    [activeLeagueId, router]
+  );
 
   useEffect(() => {
     async function loadUser(): Promise<void> {
@@ -116,6 +130,7 @@ export default function LeaderboardPage(): React.ReactElement {
                   neighbourhoodName={member.neighbourhood}
                   totalPoints={member.total_points}
                   isCurrentUser={member.user_id === userId}
+                  onClick={() => handleMemberClick(member.user_id, member.display_name)}
                 />
               ))
             )}
