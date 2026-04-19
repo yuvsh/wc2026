@@ -5,7 +5,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
 const COPY = {
-  appName: "Mundial",
+  appName: "WC2026 by Yuval Shahar",
   tagline: "נחש · תחרה · תנצח",
   btnGoogle: "המשך עם Google",
   terms: "בהתחברות, אתה מסכים ל",
@@ -51,7 +51,7 @@ export default function LoginPage(): React.ReactElement {
             priority
           />
           <div className="flex flex-col items-center gap-1">
-            <h1 className="text-[26px] font-bold text-[#111827] leading-none">
+            <h1 className="text-[20px] font-bold text-[#111827] leading-none">
               {COPY.appName}
             </h1>
             <p className="text-[15px] text-[#6B7280]">{COPY.tagline}</p>
