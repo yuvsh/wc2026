@@ -193,9 +193,9 @@ export default function GoldenBootPage(): React.ReactElement {
         )}
       </div>
 
-      {/* Confirm bar */}
+      {/* Confirm bar — sits above the bottom tab bar */}
       {!locked && !loading && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#E5E7EB] px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom))]">
+        <div className="fixed left-0 right-0 bg-white border-t border-[#E5E7EB] px-4 py-3" style={{ bottom: "calc(56px + env(safe-area-inset-bottom))" }}>
           <div className="flex items-center gap-3">
             <div className="flex-1 text-right">
               {selectedPlayer ? (
@@ -220,7 +220,7 @@ export default function GoldenBootPage(): React.ReactElement {
 
       {/* Locked confirm bar — read only */}
       {locked && savedId && !loading && (
-        <div className="fixed bottom-0 left-0 right-0 bg-[#FFFBEB] border-t border-[#FDE68A] px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom))]">
+        <div className="fixed left-0 right-0 bg-[#FFFBEB] border-t border-[#FDE68A] px-4 py-3" style={{ bottom: "calc(56px + env(safe-area-inset-bottom))" }}>
           <div className="flex items-center gap-3 justify-end">
             <span className="text-[11px] text-[#EF9F27] font-medium px-2 py-1 bg-[#FDE68A] rounded-full">
               נעול
