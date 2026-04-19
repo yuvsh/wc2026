@@ -14,6 +14,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - Always wrap `createClient()` in `useMemo`: `const supabase = useMemo(() => createClient(), [])`. Never call it bare at component top-level — a new instance per render = a new WebSocket connection per render, causing realtime channel leaks and payload errors.
 - Always destructure `authError` from `getUser()` and handle both cases: `const { data: { user }, error: authError } = await supabase.auth.getUser(); if (authError || !user) { setLoading(false); return; }`. Never only check `!user` — on auth failure the spinner stays on screen permanently.
 - Never use Supabase nested select joins (e.g. `.select("*, leagues(*)")`) when RLS policies are on both tables — the join silently returns null for the nested rows. Do two separate queries instead.
+- Before writing any multi-row query on a table, check its RLS policy in the migrations. If the policy restricts reads to own rows only (e.g. `auth.uid() = id`), a client-side `.in("id", [...])` will silently return only the current user's row — no error, just missing data. Use a `SECURITY DEFINER` RPC instead. The `users` table has this policy; any leaderboard-style query that needs other users' data must go through an RPC.
 
 ## Testing
 
