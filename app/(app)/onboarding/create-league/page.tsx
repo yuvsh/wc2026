@@ -10,6 +10,8 @@ const COPY = {
   leagueNameLabel: "שם הליגה",
   leagueNamePlaceholder: "למשל: ליגת רביבים 2026",
   createBtn: "צור ליגה",
+  errorDuplicateName: "השם הזה כבר תפוס — נסה שם אחר",
+  errorGeneric: "משהו השתבש, נסה שוב",
   inviteTitle: "הליגה שלך מוכנה!",
   inviteSubtitle: "שתף את הקוד עם החברים",
   codeLabel: "קוד הזמנה",
@@ -27,16 +29,16 @@ export default function CreateLeaguePage(): React.ReactElement {
 
   const [leagueName, setLeagueName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   async function handleCreate(): Promise<void> {
     if (!leagueName.trim()) return;
     setCreating(true);
+    setCreateError(null);
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setCreating(false); return; }
 
     const code = generateInviteCode();
@@ -48,7 +50,9 @@ export default function CreateLeaguePage(): React.ReactElement {
       .single();
 
     if (error || !league) {
-      // Retry with a new code on conflict
+      // Postgres unique violation code is "23505"
+      const isDuplicate = error?.code === "23505";
+      setCreateError(isDuplicate ? COPY.errorDuplicateName : COPY.errorGeneric);
       setCreating(false);
       return;
     }
@@ -146,10 +150,18 @@ export default function CreateLeaguePage(): React.ReactElement {
         <input
           type="text"
           value={leagueName}
-          onChange={(e) => setLeagueName(e.target.value)}
+          onChange={(e) => { setLeagueName(e.target.value); setCreateError(null); }}
           placeholder={COPY.leagueNamePlaceholder}
-          className="h-12 rounded-xl border border-[#E5E7EB] px-4 text-right text-[15px] bg-white outline-none focus:border-[#0D9488] transition-colors"
+          aria-describedby={createError ? "league-name-error" : undefined}
+          className={`h-12 rounded-xl border px-4 text-right text-[15px] bg-white outline-none transition-colors ${
+            createError ? "border-[#DC2626] focus:border-[#DC2626]" : "border-[#E5E7EB] focus:border-[#0D9488]"
+          }`}
         />
+        {createError && (
+          <p id="league-name-error" className="text-[13px] text-[#DC2626] text-right">
+            {createError}
+          </p>
+        )}
       </div>
 
       <button
