@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
 const COPY = {
@@ -41,9 +42,14 @@ export default function LoginPage(): React.ReactElement {
       <div className="w-full max-w-sm flex flex-col items-center gap-8">
         {/* Logo */}
         <div className="flex flex-col items-center gap-3">
-          <div className="w-16 h-16 bg-[#111827] rounded-2xl flex items-center justify-center">
-            <FootballIcon />
-          </div>
+          <Image
+            src="/icons/wc26_app_icon.jpeg"
+            alt="מונדיאל מאסטר"
+            width={80}
+            height={80}
+            className="rounded-2xl"
+            priority
+          />
           <div className="flex flex-col items-center gap-1">
             <h1 className="text-[26px] font-bold text-[#111827] leading-none">
               {COPY.appName}
@@ -85,19 +91,6 @@ export default function LoginPage(): React.ReactElement {
         </p>
       </div>
     </main>
-  );
-}
-
-function FootballIcon(): React.ReactElement {
-  return (
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="16" cy="16" r="13" stroke="white" strokeWidth="1.5" />
-      <polygon points="16,6 19,11 24,11 20.5,14.5 22,19.5 16,16.5 10,19.5 11.5,14.5 8,11 13,11" stroke="white" strokeWidth="1.2" fill="none" />
-      <line x1="16" y1="3" x2="16" y2="6" stroke="white" strokeWidth="1.5" />
-      <line x1="16" y1="26" x2="16" y2="29" stroke="white" strokeWidth="1.5" />
-      <line x1="3" y1="16" x2="6" y2="16" stroke="white" strokeWidth="1.5" />
-      <line x1="26" y1="16" x2="29" y2="16" stroke="white" strokeWidth="1.5" />
-    </svg>
   );
 }
 
