@@ -16,18 +16,6 @@ const COPY = {
   noLeagues: "עדיין לא בליגה? צור אחת ←",
 };
 
-function getMemberName(m: ReturnType<typeof useLeagueMembers>["members"][number]): string {
-  const u = Array.isArray(m.users) ? m.users[0] : m.users;
-  return u?.display_name ?? "—";
-}
-
-function getNeighbourhood(m: ReturnType<typeof useLeagueMembers>["members"][number]): string | null {
-  const u = Array.isArray(m.users) ? m.users[0] : m.users;
-  if (!u) return null;
-  const n = u.neighbourhoods;
-  return Array.isArray(n) ? (n[0]?.name ?? null) : (n?.name ?? null);
-}
-
 export default function LeaderboardPage(): React.ReactElement {
   const supabase = useMemo(() => createClient(), []);
   const [userId, setUserId] = useState<string | null>(null);
@@ -109,9 +97,9 @@ export default function LeaderboardPage(): React.ReactElement {
           {/* Podium */}
           {members.length >= 3 && (
             <Podium
-              first={top3[0] ? { displayName: getMemberName(top3[0]), totalPoints: top3[0].total_points, isCurrentUser: top3[0].user_id === userId } : null}
-              second={top3[1] ? { displayName: getMemberName(top3[1]), totalPoints: top3[1].total_points, isCurrentUser: top3[1].user_id === userId } : null}
-              third={top3[2] ? { displayName: getMemberName(top3[2]), totalPoints: top3[2].total_points, isCurrentUser: top3[2].user_id === userId } : null}
+              first={top3[0] ? { displayName: top3[0].display_name, totalPoints: top3[0].total_points, isCurrentUser: top3[0].user_id === userId } : null}
+              second={top3[1] ? { displayName: top3[1].display_name, totalPoints: top3[1].total_points, isCurrentUser: top3[1].user_id === userId } : null}
+              third={top3[2] ? { displayName: top3[2].display_name, totalPoints: top3[2].total_points, isCurrentUser: top3[2].user_id === userId } : null}
             />
           )}
 
@@ -124,8 +112,8 @@ export default function LeaderboardPage(): React.ReactElement {
                 <LeaderboardRow
                   key={member.user_id}
                   position={index + 1}
-                  displayName={getMemberName(member)}
-                  neighbourhoodName={getNeighbourhood(member)}
+                  displayName={member.display_name}
+                  neighbourhoodName={member.neighbourhood}
                   totalPoints={member.total_points}
                   isCurrentUser={member.user_id === userId}
                 />
