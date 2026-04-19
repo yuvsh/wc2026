@@ -16,6 +16,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - Never use Supabase nested select joins (e.g. `.select("*, leagues(*)")`) when RLS policies are on both tables — the join silently returns null for the nested rows. Do two separate queries instead.
 - Before writing any multi-row query on a table, check its RLS policy in the migrations. If the policy restricts reads to own rows only (e.g. `auth.uid() = id`), a client-side `.in("id", [...])` will silently return only the current user's row — no error, just missing data. Use a `SECURITY DEFINER` RPC instead. The `users` table has this policy; any leaderboard-style query that needs other users' data must go through an RPC.
 
+## Admin / Service-Role Operations
+
+- The service-role Supabase client lives in `lib/supabase/admin.ts` and is the only place `SUPABASE_SERVICE_ROLE_KEY` is used. Never import it from client components or expose the key to the browser.
+- Admin route group is `app/(admin)/` — its own layout with no `BottomTabBar` or user-facing PWA chrome. Never nest admin pages inside `app/(app)/`.
+- Admin protection: check `user.email === process.env.ADMIN_EMAIL` in both the Server Component (for early redirect) AND inside every Server Action body (actions can be called directly — page-level guard alone is not sufficient).
+- Always call `run-scoring` Edge Function after any manual score update — points must be recalculated immediately. URL: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/run-scoring`, Authorization header uses `SUPABASE_SERVICE_ROLE_KEY`.
+- Undo pattern for admin overrides: store previous values in `prev_*` columns on the same row (e.g. `prev_score_a`, `prev_score_b`). On save: move current → prev, write new. On undo: swap back and clear prev. One level of undo is sufficient for fixing cron mistakes.
+
 ## Testing
 
 - Test files live in `tests/unit/` and `tests/e2e/`, not next to source files. This overrides the global rule. The Jest config's `testMatch` pattern targets `tests/unit/**/*.test.{ts,tsx}`.
