@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
+
 const COPY = {
-  appName: "WC2026 by Yuval Shahar",
+  appName: "WC26",
+  credit: "created by Yuval Shahar",
   tagline: "נחש · תחרה · תנצח",
   btnGoogle: "המשך עם Google",
   terms: "בהתחברות, אתה מסכים ל",
@@ -15,7 +17,7 @@ const COPY = {
 };
 
 export default function LoginPage(): React.ReactElement {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [loading, setLoading] = useState(false);
 
   async function signInWithGoogle(): Promise<void> {
@@ -35,7 +37,7 @@ export default function LoginPage(): React.ReactElement {
   }
 
   return (
-    <main className="min-h-screen bg-white flex flex-col items-center justify-center px-6">
+    <main className="relative min-h-screen bg-white flex flex-col items-center justify-center px-6">
       {/* Top teal accent bar */}
       <div className="fixed top-0 left-0 right-0 h-1 bg-[#0D9488]" />
 
@@ -51,7 +53,7 @@ export default function LoginPage(): React.ReactElement {
             priority
           />
           <div className="flex flex-col items-center gap-1">
-            <h1 className="text-[20px] font-bold text-[#111827] leading-none">
+            <h1 className="text-[32px] font-black text-[#111827] leading-none tracking-tight">
               {COPY.appName}
             </h1>
             <p className="text-[15px] text-[#6B7280]">{COPY.tagline}</p>
@@ -90,6 +92,8 @@ export default function LoginPage(): React.ReactElement {
           </a>
         </p>
       </div>
+
+      <p className="absolute bottom-6 text-[12px] text-[#9CA3AF]">{COPY.credit}</p>
     </main>
   );
 }
