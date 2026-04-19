@@ -96,7 +96,7 @@ export default function LeaguePage(): React.ReactElement {
       .from("leagues")
       .select("id")
       .eq("invite_code", code)
-      .single();
+      .maybeSingle();
 
     if (!league) {
       setJoinError(true);
