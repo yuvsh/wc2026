@@ -18,9 +18,9 @@ as $$
 begin
   -- Only return data if the calling user belongs to this league
   if not exists (
-    select 1 from public.league_members
-    where league_id = p_league_id
-      and user_id = auth.uid()
+    select 1 from public.league_members lm_check
+    where lm_check.league_id = p_league_id
+      and lm_check.user_id = auth.uid()
   ) then
     return;
   end if;
