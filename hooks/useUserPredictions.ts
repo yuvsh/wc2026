@@ -21,19 +21,25 @@ export interface UserPrediction {
 export function useUserPredictions(
   userId: string | null,
   leagueId: string | null
-): { predictions: UserPrediction[]; isLoading: boolean } {
+): { predictions: UserPrediction[]; isLoading: boolean; error: Error | null } {
   const supabase = useMemo(() => createClient(), []);
 
-  const key = userId && leagueId ? `user-predictions-${userId}-${leagueId}` : null;
+  const key = userId && leagueId ? ["user-predictions", userId, leagueId] : null;
 
-  const { data, isLoading } = useSWR(key, async () => {
+  const { data, isLoading, error } = useSWR(key, async () => {
     const { data, error } = await supabase.rpc("get_user_predictions", {
       p_user_id: userId!,
       p_league_id: leagueId!,
     });
     if (error) throw error;
-    return (data ?? []) as UserPrediction[];
+    // Explicitly preserve nulls for score fields — Supabase-generated types
+    // may infer these as non-nullable from the function signature.
+    return (data ?? []).map((row: UserPrediction) => ({
+      ...row,
+      score_a: row.score_a ?? null,
+      score_b: row.score_b ?? null,
+    })) as UserPrediction[];
   });
 
-  return { predictions: data ?? [], isLoading };
+  return { predictions: data ?? [], isLoading, error: error ?? null };
 }

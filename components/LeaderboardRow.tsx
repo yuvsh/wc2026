@@ -81,9 +81,9 @@ export default function LeaderboardRow({
         {totalPoints}
       </span>
 
-      {/* Chevron — only when row is tappable */}
+      {/* Chevron — only when row is tappable; rtl:rotate-180 mirrors it for RTL reading direction */}
       {onClick && (
-        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 text-[#D1D5DB]">
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 text-[#D1D5DB] rtl:rotate-180">
           <path d="M10 4L6 8l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       )}

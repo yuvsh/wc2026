@@ -1,14 +1,16 @@
 "use client";
 
-import { use } from "react";
+import { use, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import HistoryMatchCard from "@/components/HistoryMatchCard";
 import { useUserPredictions } from "@/hooks/useUserPredictions";
 
 const COPY = {
   back: "חזרה",
-  empty: "עדיין אין ניחושים שהתחילו",
-  live: "שידור חי",
+  backArrow: "←",
+  empty: "עוד לא ניחש כלום",
+  live: "LIVE",
+  fallbackName: "שחקן",
 };
 
 interface PageProps {
@@ -21,11 +23,18 @@ export default function UserPredictionsPage({ params }: PageProps): React.ReactE
   const router = useRouter();
 
   const leagueId = searchParams.get("leagueId");
-  const displayName = searchParams.get("name") ?? "";
+  const displayName = searchParams.get("name") || COPY.fallbackName;
 
-  const { predictions, isLoading } = useUserPredictions(userId, leagueId);
+  const { predictions, isLoading, error } = useUserPredictions(userId, leagueId);
+
+  // Redirect if navigated to without leagueId context
+  if (!leagueId) {
+    router.replace("/leaderboard");
+    return <></>;
+  }
 
   // Group by date (YYYY-MM-DD in Israel timezone), newest first
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const groupedMap = new Map<string, typeof predictions>();
   for (const p of predictions) {
     const dateKey = new Date(p.kickoff_at).toLocaleDateString("sv-SE", {
@@ -43,9 +52,9 @@ export default function UserPredictionsPage({ params }: PageProps): React.ReactE
         <button
           onClick={() => router.back()}
           aria-label={COPY.back}
-          className="text-[#0D9488] text-[15px] font-medium shrink-0"
+          className="text-[#0D9488] text-[20px] font-medium shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center"
         >
-          {"→"}
+          {COPY.backArrow}
         </button>
         <h1 className="text-[17px] font-bold text-[#111827] flex-1 text-right truncate">
           {displayName}
@@ -56,6 +65,10 @@ export default function UserPredictionsPage({ params }: PageProps): React.ReactE
       {isLoading ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="w-8 h-8 border-2 border-[#0D9488] border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : error ? (
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-[15px] text-[#9CA3AF]">{COPY.empty}</p>
         </div>
       ) : predictions.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
@@ -69,7 +82,7 @@ export default function UserPredictionsPage({ params }: PageProps): React.ReactE
               {groupedMap.get(dateKey)!.map((p) => (
                 <div key={p.match_id} className="relative">
                   {p.status === "live" && (
-                    <span className="absolute top-2 left-2 z-10 text-[11px] font-bold text-white bg-[#EF4444] px-2 py-0.5 rounded-full">
+                    <span className="absolute top-2 left-2 z-10 text-[11px] font-bold text-white bg-[#EF4444] px-2 py-0.5 rounded-full tracking-wide">
                       {COPY.live}
                     </span>
                   )}
