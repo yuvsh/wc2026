@@ -39,12 +39,12 @@ export default function LeaderboardRow({
       tabIndex={onClick ? 0 : undefined}
       onClick={onClick}
       onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") onClick(); } : undefined}
-      aria-label={onClick ? displayName : undefined}
+      aria-label={onClick ? `הצג ניחושים של ${displayName}` : undefined}
       className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors ${
         isCurrentUser
           ? "bg-[#F0FDFA] border-[#2DD4BF]"
           : "bg-white border-[#E5E7EB]"
-      } ${onClick ? "cursor-pointer active:opacity-70" : ""}`}
+      } ${onClick ? "cursor-pointer active:opacity-70 hover:bg-[#F9FAFB]" : ""}`}
     >
       <PositionLabel position={position} />
 

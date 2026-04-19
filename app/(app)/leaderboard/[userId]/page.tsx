@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useMemo } from "react";
+import { use } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import HistoryMatchCard from "@/components/HistoryMatchCard";
 import { useUserPredictions } from "@/hooks/useUserPredictions";
@@ -33,8 +33,7 @@ export default function UserPredictionsPage({ params }: PageProps): React.ReactE
     return <></>;
   }
 
-  // Group by date (YYYY-MM-DD in Israel timezone), newest first
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Group by date — sv-SE key (YYYY-MM-DD) for reliable sorting, display label formatted in Hebrew
   const groupedMap = new Map<string, typeof predictions>();
   for (const p of predictions) {
     const dateKey = new Date(p.kickoff_at).toLocaleDateString("sv-SE", {
@@ -44,6 +43,14 @@ export default function UserPredictionsPage({ params }: PageProps): React.ReactE
     groupedMap.get(dateKey)!.push(p);
   }
   const dateKeys = Array.from(groupedMap.keys()).sort().reverse();
+
+  function formatDateLabel(isoDateKey: string): string {
+    return new Date(isoDateKey).toLocaleDateString("he-IL", {
+      day: "numeric",
+      month: "long",
+      timeZone: "Asia/Jerusalem",
+    });
+  }
 
   return (
     <div className="flex-1 flex flex-col">
@@ -75,14 +82,14 @@ export default function UserPredictionsPage({ params }: PageProps): React.ReactE
           <p className="text-[15px] text-[#9CA3AF]">{COPY.empty}</p>
         </div>
       ) : (
-        <div className="flex-1 px-4 py-4 flex flex-col gap-6 pb-6">
+        <div className="flex-1 px-4 py-4 flex flex-col gap-6">
           {dateKeys.map((dateKey) => (
             <div key={dateKey} className="flex flex-col gap-3">
-              <p className="text-[13px] font-medium text-[#6B7280] text-right">{dateKey}</p>
+              <p className="text-[13px] font-medium text-[#6B7280] text-right">{formatDateLabel(dateKey)}</p>
               {groupedMap.get(dateKey)!.map((p) => (
                 <div key={p.match_id} className="relative">
                   {p.status === "live" && (
-                    <span className="absolute top-2 left-2 z-10 text-[11px] font-bold text-white bg-[#EF4444] px-2 py-0.5 rounded-full tracking-wide">
+                    <span className="absolute top-2 right-2 z-10 text-[11px] font-bold text-white bg-[#EF4444] px-2 py-0.5 rounded-full tracking-wide">
                       {COPY.live}
                     </span>
                   )}
