@@ -23,6 +23,7 @@ interface LeagueEntry {
   league_id: string;
   name: string;
   invite_code: string;
+  created_by: string | null;
 }
 
 interface UserStats {
@@ -49,6 +50,11 @@ const COPY = {
   inviteCode: "קוד הזמנה",
   joinOrCreate: "הצטרף לליגה או צור אחת",
   noLeagues: "עדיין לא בליגה",
+  deleteLeague: "מחק ליגה",
+  deleteConfirm: "בטוח? הפעולה לא ניתנת לביטול",
+  deleteYes: "כן, מחק",
+  deleteNo: "ביטול",
+  deleteToast: "הליגה נמחקה",
   save: "שמור",
   saving: "שומר...",
   cancel: "ביטול",
@@ -119,6 +125,8 @@ export default function ProfilePage(): React.ReactElement {
   const [saving, setSaving] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -169,7 +177,7 @@ export default function ProfilePage(): React.ReactElement {
 
         const { data: leagueRows, error: leagueError } = await supabase
           .from("leagues")
-          .select("id, name, invite_code")
+          .select("id, name, invite_code, created_by")
           .in("id", leagueIds);
 
         if (leagueError) {
@@ -179,6 +187,7 @@ export default function ProfilePage(): React.ReactElement {
             league_id: row.id as string,
             name: row.name as string,
             invite_code: row.invite_code as string,
+            created_by: row.created_by as string | null,
           }));
           setLeagues(entries);
 
@@ -255,6 +264,19 @@ export default function ProfilePage(): React.ReactElement {
       showToast(COPY.copyToast);
     } catch {
       showToast(code);
+    }
+  }
+
+  async function handleDeleteLeague(leagueId: string): Promise<void> {
+    setDeleting(true);
+    const { error } = await supabase.from("leagues").delete().eq("id", leagueId);
+    setDeleting(false);
+    setConfirmDeleteId(null);
+    if (error) {
+      showToast(COPY.errorToast);
+    } else {
+      setLeagues((prev) => prev.filter((l) => l.league_id !== leagueId));
+      showToast(COPY.deleteToast);
     }
   }
 
@@ -355,29 +377,72 @@ export default function ProfilePage(): React.ReactElement {
           ) : (
             leagues.map((entry) => {
               const isGlobal = entry.league_id === GLOBAL_LEAGUE_ID;
+              const isOwner = entry.created_by === userId;
+              const isConfirming = confirmDeleteId === entry.league_id;
+
               return (
                 <div
                   key={entry.league_id}
-                  className="flex items-center justify-between px-4 py-3 border-b border-[#F3F4F6] last:border-b-0"
+                  className="flex items-center justify-between px-4 py-3 border-b border-[#F3F4F6] last:border-b-0 gap-3"
                 >
-                  {isGlobal ? (
-                    <span className="text-[12px] text-[#0D9488] bg-[#F0FDFA] px-2 py-1 rounded-full">
-                      {COPY.globalLeagueBadge}
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => copyInviteCode(entry.invite_code)}
-                      aria-label={`העתק קוד הזמנה: ${entry.invite_code}`}
-                      className="text-[13px] text-[#0D9488] font-mono bg-[#F0FDFA] px-2 py-1 rounded-lg min-h-[44px] flex items-center"
-                    >
-                      {entry.invite_code}
-                    </button>
-                  )}
-                  <div className="flex flex-col items-end gap-0.5">
+                  {/* Left side: invite code / badge / delete confirm */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {isConfirming ? (
+                      <>
+                        <button
+                          onClick={() => handleDeleteLeague(entry.league_id)}
+                          disabled={deleting}
+                          aria-label="אשר מחיקת ליגה"
+                          className="text-[13px] text-white bg-[#DC2626] px-3 py-1.5 rounded-lg min-h-[44px] flex items-center disabled:opacity-50"
+                        >
+                          {deleting ? (
+                            <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                          ) : COPY.deleteYes}
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteId(null)}
+                          aria-label="בטל מחיקת ליגה"
+                          className="text-[13px] text-[#6B7280] px-3 py-1.5 rounded-lg border border-[#E5E7EB] min-h-[44px] flex items-center"
+                        >
+                          {COPY.deleteNo}
+                        </button>
+                      </>
+                    ) : isGlobal ? (
+                      <span className="text-[12px] text-[#0D9488] bg-[#F0FDFA] px-2 py-1 rounded-full">
+                        {COPY.globalLeagueBadge}
+                      </span>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => copyInviteCode(entry.invite_code)}
+                          aria-label={`העתק קוד הזמנה: ${entry.invite_code}`}
+                          className="text-[13px] text-[#0D9488] font-mono bg-[#F0FDFA] px-2 py-1 rounded-lg min-h-[44px] flex items-center"
+                        >
+                          {entry.invite_code}
+                        </button>
+                        {isOwner && (
+                          <button
+                            onClick={() => setConfirmDeleteId(entry.league_id)}
+                            aria-label={`מחק ליגה: ${entry.name}`}
+                            className="text-[#DC2626] min-h-[44px] min-w-[44px] flex items-center justify-center"
+                          >
+                            <TrashIcon />
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  {/* Right side: name + sublabel */}
+                  <div className="flex flex-col items-end gap-0.5 flex-1">
                     <span className="text-[15px] font-medium text-[#111827]">{entry.name}</span>
-                    <span className="text-[12px] text-[#9CA3AF]">
-                      {isGlobal ? COPY.globalLeagueSublabel : COPY.inviteCode}
-                    </span>
+                    {isConfirming ? (
+                      <span className="text-[12px] text-[#DC2626]">{COPY.deleteConfirm}</span>
+                    ) : (
+                      <span className="text-[12px] text-[#9CA3AF]">
+                        {isGlobal ? COPY.globalLeagueSublabel : COPY.inviteCode}
+                      </span>
+                    )}
                   </div>
                 </div>
               );
@@ -416,5 +481,13 @@ export default function ProfilePage(): React.ReactElement {
         </div>
       )}
     </div>
+  );
+}
+
+function TrashIcon(): React.ReactElement {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M3 4.5h12M7.5 4.5V3h3v1.5M14.25 4.5l-.75 10.5H4.5L3.75 4.5M7.5 8.25v4.5M10.5 8.25v4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
   );
 }
