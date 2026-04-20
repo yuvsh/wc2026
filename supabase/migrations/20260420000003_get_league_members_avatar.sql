@@ -1,7 +1,11 @@
 -- Add avatar_url to get_league_members so the leaderboard and podium
 -- can display Google profile photos.
+-- Must drop first — PostgreSQL does not allow CREATE OR REPLACE when
+-- the return type changes.
 
-create or replace function get_league_members(p_league_id uuid)
+drop function if exists get_league_members(uuid);
+
+create function get_league_members(p_league_id uuid)
 returns table (
   user_id        uuid,
   total_points   int,
