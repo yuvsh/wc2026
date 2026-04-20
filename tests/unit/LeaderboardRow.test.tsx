@@ -8,7 +8,8 @@
  * - Position colours: gold (1), silver (2), bronze (3), gray (4+)
  * - Current user: teal background, teal avatar, "אתה" badge, teal points
  * - Other users: white background, gray avatar, no badge
- * - Avatar shows correct initials
+ * - Avatar: shows Google profile photo when avatarUrl is provided; falls back to initials
+ * - All tests below pass avatarUrl=null to exercise the initials fallback path
  * - Neighbourhood name shown/hidden
  */
 

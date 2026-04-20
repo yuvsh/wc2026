@@ -136,7 +136,10 @@ golden_boot_predictions
 
 ### 3.3 Special Entities
 
-**Global League** — A fixed league with `id = 00000000-0000-0000-0000-000000000001` and `created_by = NULL`. Every new user is auto-joined via a trigger on `public.users`. Provides a site-wide leaderboard with no setup required. Cannot be deleted (the `leagues_delete_own` policy requires `auth.uid() = created_by`, which is never true for null).
+**Global League** — A fixed league with `id = 00000000-0000-0000-0000-000000000001` and `created_by = NULL`. Every new user is auto-joined via two mechanisms acting as belt-and-suspenders:
+1. `handle_new_user()` trigger — inserts directly into `league_members` at signup.
+2. `ensure_user_in_global_league()` RPC — called from `app/auth/callback/route.ts` after every successful OAuth code exchange as a safety net for any edge case where the trigger fired but the `league_members` insert was missed.
+Both use `ON CONFLICT DO NOTHING`, making the double-write safe. Cannot be deleted (the `leagues_delete_own` policy requires `auth.uid() = created_by`, which is never true for null).
 
 **Admin Score Override** — `matches.prev_score_a` / `prev_score_b` enable one-level undo. Before any admin score update, the current values are written to the `prev_*` columns. The undo action swaps them back and clears `prev_*`. These columns are otherwise null.
 
@@ -218,13 +221,15 @@ Some queries need data from tables whose RLS policies block cross-user access (e
 
 | Function | Purpose | Caller check |
 | :--- | :--- | :--- |
-| `get_league_members(league_id)` | Returns all members of a league with points and display names | Caller must be a member of the league |
+| `get_league_members(league_id)` | Returns all members of a league with points, display names, and `avatar_url` | Caller must be a member of the league |
 | `get_user_predictions(user_id, league_id)` | Returns a member's predictions for started matches | Caller and target must both be members of the league |
+| `ensure_user_in_global_league()` | Inserts the calling user into the global league if not already a member; no-op if already present | Uses `auth.uid()` — can only affect the caller's own row |
 
 Rules for all SECURITY DEFINER functions:
 - Always set `search_path = ''` to prevent search-path injection
 - Always verify membership inside the function body — never rely on the caller to enforce access
 - Always `GRANT EXECUTE ... TO authenticated` (not `public`)
+- When changing a function's return type, use `DROP FUNCTION` before `CREATE FUNCTION` — PostgreSQL does not allow `CREATE OR REPLACE` when the return type changes (this was required for the `avatar_url` addition to `get_league_members`).
 
 ### 5.2 Admin Access Pattern
 

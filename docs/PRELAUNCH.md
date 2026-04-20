@@ -16,6 +16,16 @@ Complete all items before the tournament opens for predictions.
   7. `20260412000002_scoring_rpcs.sql`
   8. `20260412000003_seed_matches.sql`
   9. `20260412000004_seed_group_standings.sql`
+  10. `20260412000005_fix_groups.sql`
+  11. `20260418000001_global_league.sql`
+  12. `20260419000001_unique_league_name.sql`
+  13. `20260419000002_leagues_read_by_invite_code.sql`
+  14. `20260419000003_get_league_members_fn.sql`
+  15. `20260419000004_leagues_delete_policy.sql`
+  16. `20260419000005_get_user_predictions_fn.sql`
+  17. `20260419000006_admin_score_undo.sql`
+  18. `20260420000001_fix_global_league_trigger.sql`
+  19. `20260420000003_get_league_members_avatar.sql`
 
 ---
 

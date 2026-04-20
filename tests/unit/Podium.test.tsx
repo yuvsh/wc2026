@@ -10,6 +10,8 @@
  * - DOM order (2nd → 1st → 3rd)
  * - Current user avatar uses teal background
  * - Other users use dark background
+ * - Avatar: shows Google profile photo when avatarUrl is provided; falls back to initials
+ * - All tests below pass avatarUrl=null to exercise the initials fallback path
  * - Null entries render a placeholder (no crash)
  */
 

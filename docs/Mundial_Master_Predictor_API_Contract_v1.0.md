@@ -189,28 +189,27 @@ Client call:
 
 ### 6.1 Individual Leaderboard for a League
 
+**Note:** Do NOT use nested joins for this query. The `users` table has a "read own row" RLS policy, so `.select('*, users(*)')` silently returns `null` for all other members. Use the `get_league_members` SECURITY DEFINER RPC instead.
+
 ```
 Client call:
-  supabase.from('league_members')
-    .select('total_points, users(id, display_name, avatar_url, neighbourhoods(name))')
-    .eq('league_id', leagueId)
-    .order('total_points', { ascending: false })
+  supabase.rpc('get_league_members', { p_league_id: leagueId })
 ```
 
 **Response:**
 ```json
 [
   {
+    "user_id": "uuid",
     "total_points": 47,
-    "users": {
-      "id": "uuid",
-      "display_name": "דני כהן",
-      "avatar_url": "https://...",
-      "neighbourhoods": { "name": "מרכז" }
-    }
+    "display_name": "דני כהן",
+    "neighbourhood": "מרכז",
+    "avatar_url": "https://lh3.googleusercontent.com/..."
   }
 ]
 ```
+
+The RPC verifies that the caller is a member of the league before returning any data. Results are ordered by `total_points desc`.
 
 ### 6.2 Neighbourhood Leaderboard for a League (Phase 2)
 
@@ -441,20 +440,19 @@ These are custom serverside functions that run on Supabase Edge. They are called
 ```
 
 **What it does:**
-1. Fetches all predictions for the match
-2. For each prediction:
+1. Fetches all users from the `users` table
+2. Inserts a locked 0-0 default prediction (`ON CONFLICT DO NOTHING`) for any user who never submitted a prediction for this match — ensures every user is always scored (0 pts for wrong outcome, 3 pts if the actual result was 0-0)
+3. Fetches all unscored predictions for the match (including newly inserted defaults)
+4. For each prediction:
    - Exact score → 3 points
    - Correct result (90 min) → 1 point
    - Miss → 0 points
-3. Updates `predictions.points_awarded`
-4. Updates `league_members.total_points` for every league the user belongs to
+5. Updates `predictions.points_awarded` and `league_members.total_points` atomically via the `score_prediction` RPC
 
 **Response:**
 ```json
 {
-  "match_id": "uuid",
-  "predictions_scored": 12,
-  "total_points_awarded": 18
+  "scored": 12
 }
 ```
 
