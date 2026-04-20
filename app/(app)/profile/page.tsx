@@ -9,6 +9,7 @@ import Link from "next/link";
 
 interface UserProfile {
   display_name: string;
+  avatar_url: string | null;
   provider: string;
   neighbourhood_id: string | null;
   hood_locked: boolean;
@@ -142,7 +143,7 @@ export default function ProfilePage(): React.ReactElement {
       const [profileResult, membershipsResult, predictionsResult] = await Promise.all([
         supabase
           .from("users")
-          .select("display_name, provider, neighbourhood_id, hood_locked")
+          .select("display_name, avatar_url, provider, neighbourhood_id, hood_locked")
           .eq("id", user.id)
           .single(),
         // Two-step league load: memberships first, then league details separately
@@ -299,9 +300,19 @@ export default function ProfilePage(): React.ReactElement {
 
       {/* Avatar + name */}
       <div className="flex flex-col items-center gap-2 py-6 bg-white border-b border-[#E5E7EB]">
-        <div className="w-16 h-16 rounded-full bg-[#0D9488] flex items-center justify-center text-white text-[22px] font-bold">
-          {getInitials(displayName)}
-        </div>
+        {profile?.avatar_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={profile.avatar_url}
+            alt={displayName}
+            referrerPolicy="no-referrer"
+            className="w-16 h-16 rounded-full object-cover"
+          />
+        ) : (
+          <div className="w-16 h-16 rounded-full bg-[#0D9488] flex items-center justify-center text-white text-[22px] font-bold">
+            {getInitials(displayName)}
+          </div>
+        )}
         <p className="text-[17px] font-bold text-[#111827]">{displayName}</p>
         {profile && (
           <p className="text-[13px] text-[#9CA3AF]">{COPY.connectedWith(profile.provider)}</p>

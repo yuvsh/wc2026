@@ -10,6 +10,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
+      // Safety net: ensure the user is in the global league regardless of trigger status
+      await supabase.rpc("ensure_user_in_global_league");
       return NextResponse.redirect(`${origin}/`);
     }
   }
