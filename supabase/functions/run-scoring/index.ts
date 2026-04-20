@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // Award points for all predictions on a finished match.
 // Called by poll-results after a match reaches FT status.
 // Points: exact score = 3 (bingo), correct outcome = 1, miss = 0.
+// Users with no prediction get a default 0-0 inserted before scoring.
 
 const BINGO_POINTS = 3;
 const CORRECT_POINTS = 1;
@@ -69,7 +70,35 @@ Deno.serve(async (req): Promise<Response> => {
     return new Response(JSON.stringify({ error: "scores missing" }), { status: 400 });
   }
 
-  // Fetch all unscored predictions for this match
+  // Insert locked 0-0 defaults for any user who never submitted a prediction.
+  // ON CONFLICT DO NOTHING ensures existing predictions are untouched.
+  const { data: allUsers, error: usersError } = await supabase
+    .from("users")
+    .select("id");
+
+  if (usersError) {
+    return new Response(JSON.stringify({ error: usersError.message }), { status: 500 });
+  }
+
+  if (allUsers && allUsers.length > 0) {
+    const defaults = allUsers.map((u) => ({
+      user_id: u.id,
+      match_id,
+      predicted_a: 0,
+      predicted_b: 0,
+      is_locked: true,
+    }));
+
+    const { error: defaultsError } = await supabase
+      .from("predictions")
+      .upsert(defaults, { onConflict: "user_id,match_id", ignoreDuplicates: true });
+
+    if (defaultsError) {
+      return new Response(JSON.stringify({ error: defaultsError.message }), { status: 500 });
+    }
+  }
+
+  // Fetch all unscored predictions for this match (includes newly inserted defaults)
   const { data: predictions, error: predError } = await supabase
     .from("predictions")
     .select("id, user_id, predicted_a, predicted_b")
