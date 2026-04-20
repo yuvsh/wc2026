@@ -40,8 +40,8 @@ export default function PlayerList({
 
   const filtered = search.trim()
     ? players.filter((p) =>
-        p.name.includes(search.trim()) ||
-        p.country.includes(search.trim())
+        p.name.toLowerCase().includes(search.trim().toLowerCase()) ||
+        p.country.toLowerCase().includes(search.trim().toLowerCase())
       )
     : players;
 

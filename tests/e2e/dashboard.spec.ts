@@ -42,7 +42,7 @@ test.describe("E2E-PRED — prediction flow", () => {
     await inputs.nth(0).fill("2");
     await inputs.nth(1).fill("1");
 
-    await page.getByRole("button", { name: "שמור ניחוש" }).first().click();
+    await page.getByRole("button", { name: "שמור" }).first().click();
 
     await expect(page.getByText("הניחוש נשמר ✓")).toBeVisible();
   });
@@ -55,13 +55,13 @@ test.describe("E2E-PRED — prediction flow", () => {
     const inputs = page.getByRole("spinbutton");
     await inputs.nth(0).fill("1");
     await inputs.nth(1).fill("0");
-    await page.getByRole("button", { name: "שמור ניחוש" }).first().click();
+    await page.getByRole("button", { name: "שמור" }).first().click();
     await expect(page.getByText("הניחוש נשמר ✓")).toBeVisible();
 
     // Edit again
     await inputs.nth(0).fill("3");
     await inputs.nth(1).fill("2");
-    await page.getByRole("button", { name: "שמור ניחוש" }).first().click();
+    await page.getByRole("button", { name: "שמור" }).first().click();
     await expect(page.getByText("הניחוש נשמר ✓")).toBeVisible();
   });
 

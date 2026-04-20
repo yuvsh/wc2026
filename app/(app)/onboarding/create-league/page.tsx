@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { generateInviteCode } from "@/lib/utils/inviteCode";
@@ -25,7 +25,7 @@ const COPY = {
 
 export default function CreateLeaguePage(): React.ReactElement {
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [leagueName, setLeagueName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -38,8 +38,8 @@ export default function CreateLeaguePage(): React.ReactElement {
     setCreating(true);
     setCreateError(null);
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setCreating(false); return; }
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) { setCreating(false); return; }
 
     const code = generateInviteCode();
 
@@ -137,7 +137,7 @@ export default function CreateLeaguePage(): React.ReactElement {
         aria-label="חזור"
         className="self-end text-[#0D9488] text-[17px] font-medium mb-4 min-h-[44px] flex items-center"
       >
-        →
+        ←
       </button>
       <h1 className="text-[22px] font-bold text-[#111827] text-right mb-8">
         {COPY.pageTitle}

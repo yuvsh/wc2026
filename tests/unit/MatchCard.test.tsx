@@ -70,7 +70,7 @@ describe("open state (scheduled, not locked)", () => {
 
   it("renders the save button disabled when inputs are empty", () => {
     render(<MatchCard {...makeProps()} />);
-    expect(screen.getByRole("button", { name: "שמור ניחוש" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "שמור" })).toBeDisabled();
   });
 
   it("renders the save button enabled after both scores are entered", () => {
@@ -78,7 +78,7 @@ describe("open state (scheduled, not locked)", () => {
     const [inputA, inputB] = screen.getAllByRole("spinbutton");
     fireEvent.change(inputA, { target: { value: "2" } });
     fireEvent.change(inputB, { target: { value: "1" } });
-    expect(screen.getByRole("button", { name: "שמור ניחוש" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "שמור" })).toBeEnabled();
   });
 
   it("pre-fills inputs with existing prediction values", () => {
@@ -100,7 +100,7 @@ describe("open state (scheduled, not locked)", () => {
     const [inputA, inputB] = screen.getAllByRole("spinbutton");
     fireEvent.change(inputA, { target: { value: "3" } });
     fireEvent.change(inputB, { target: { value: "1" } });
-    fireEvent.click(screen.getByRole("button", { name: "שמור ניחוש" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמור" }));
 
     await waitFor(() => {
       expect(onSave).toHaveBeenCalledWith("match-1", 3, 1);
@@ -120,7 +120,7 @@ describe("locked state (isLocked prop)", () => {
 
   it("hides the save button", () => {
     render(<MatchCard {...makeProps({ isLocked: true })} />);
-    expect(screen.queryByRole("button", { name: "שמור ניחוש" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "שמור" })).toBeNull();
   });
 
   it("shows the lock indicator", () => {
@@ -192,7 +192,7 @@ describe("finished state", () => {
 
   it("shows pending label when points_awarded is null (not yet scored)", () => {
     render(<MatchCard {...makeProps({ status: "finished", scoreA: 2, scoreB: 1, pointsAwarded: null })} />);
-    expect(screen.getByText("ממתין לתוצאה")).toBeInTheDocument();
+    expect(screen.getByText("מחכים לתוצאה...")).toBeInTheDocument();
   });
 
   it("does not show prediction text when user has no prediction", () => {

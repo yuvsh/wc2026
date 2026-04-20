@@ -25,7 +25,7 @@ const COPY = {
   savedToast: "הבחירה נשמרה ✓",
   errorToast: "משהו השתבש, נסה שוב",
   noSelection: "בחר שחקן",
-  back: "→",
+  back: "←",
 };
 
 function LockCountdown({ kickoffAt }: { kickoffAt: Date }): React.ReactElement {
