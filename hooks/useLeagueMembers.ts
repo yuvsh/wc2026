@@ -8,6 +8,7 @@ export interface LeagueMember {
   total_points: number;
   display_name: string;
   neighbourhood: string | null;
+  avatar_url: string | null;
 }
 
 async function fetchLeagueMembers(

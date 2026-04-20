@@ -17,10 +17,10 @@ import React from "react";
 import { render, screen, within } from "@testing-library/react";
 import Podium from "@/components/Podium";
 
-const ALICE = { displayName: "Alice Smith", totalPoints: 30, isCurrentUser: false };
-const BOB   = { displayName: "Bob Jones",   totalPoints: 20, isCurrentUser: false };
-const CAROL = { displayName: "Carol Lee",   totalPoints: 10, isCurrentUser: false };
-const ME    = { displayName: "יובל כהן",    totalPoints: 25, isCurrentUser: true  };
+const ALICE = { displayName: "Alice Smith", avatarUrl: null, totalPoints: 30, isCurrentUser: false };
+const BOB   = { displayName: "Bob Jones",   avatarUrl: null, totalPoints: 20, isCurrentUser: false };
+const CAROL = { displayName: "Carol Lee",   avatarUrl: null, totalPoints: 10, isCurrentUser: false };
+const ME    = { displayName: "יובל כהן",    avatarUrl: null, totalPoints: 25, isCurrentUser: true  };
 
 // ---------------------------------------------------------------------------
 // All three filled

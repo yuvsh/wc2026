@@ -29,6 +29,7 @@ function renderRow(overrides: Props = {}): ReturnType<typeof render> {
     <LeaderboardRow
       position={overrides.position ?? 1}
       displayName={overrides.displayName ?? "Alice Smith"}
+      avatarUrl={null}
       neighbourhoodName={overrides.neighbourhoodName ?? null}
       totalPoints={overrides.totalPoints ?? 10}
       isCurrentUser={overrides.isCurrentUser ?? false}

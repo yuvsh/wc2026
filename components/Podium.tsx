@@ -1,5 +1,6 @@
 interface PodiumEntry {
   displayName: string;
+  avatarUrl: string | null;
   totalPoints: number;
   isCurrentUser: boolean;
 }
@@ -54,11 +55,21 @@ function PodiumBlock({ entry, rank }: PodiumBlockProps): React.ReactElement {
       </span>
 
       {/* Avatar */}
-      <div
-        className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-bold ${avatarBg}`}
-      >
-        {getInitials(entry.displayName)}
-      </div>
+      {entry.avatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={entry.avatarUrl}
+          alt={entry.displayName}
+          referrerPolicy="no-referrer"
+          className="w-10 h-10 rounded-full object-cover"
+        />
+      ) : (
+        <div
+          className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-bold ${avatarBg}`}
+        >
+          {getInitials(entry.displayName)}
+        </div>
+      )}
 
       {/* Name */}
       <p className="text-[11px] text-[#111827] font-medium text-center max-w-[80px] truncate">

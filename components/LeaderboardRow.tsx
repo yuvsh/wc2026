@@ -1,6 +1,7 @@
 interface LeaderboardRowProps {
   position: number;
   displayName: string;
+  avatarUrl: string | null;
   neighbourhoodName: string | null;
   totalPoints: number;
   isCurrentUser: boolean;
@@ -28,6 +29,7 @@ function PositionLabel({ position }: { position: number }): React.ReactElement {
 export default function LeaderboardRow({
   position,
   displayName,
+  avatarUrl,
   neighbourhoodName,
   totalPoints,
   isCurrentUser,
@@ -49,15 +51,25 @@ export default function LeaderboardRow({
       <PositionLabel position={position} />
 
       {/* Avatar */}
-      <div
-        className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-[13px] font-bold ${
-          isCurrentUser
-            ? "bg-[#0D9488] text-white"
-            : "bg-[#F3F4F6] text-[#6B7280]"
-        }`}
-      >
-        {getInitials(displayName)}
-      </div>
+      {avatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={avatarUrl}
+          alt={displayName}
+          referrerPolicy="no-referrer"
+          className="w-9 h-9 rounded-full object-cover shrink-0"
+        />
+      ) : (
+        <div
+          className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-[13px] font-bold ${
+            isCurrentUser
+              ? "bg-[#0D9488] text-white"
+              : "bg-[#F3F4F6] text-[#6B7280]"
+          }`}
+        >
+          {getInitials(displayName)}
+        </div>
+      )}
 
       {/* Name + neighbourhood */}
       <div className="flex-1 text-right min-w-0">
@@ -83,7 +95,7 @@ export default function LeaderboardRow({
 
       {/* Chevron — only when row is tappable; rtl:rotate-180 mirrors it for RTL reading direction */}
       {onClick && (
-        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 text-[#D1D5DB] rtl:rotate-180">
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 text-[#D1D5DB]">
           <path d="M10 4L6 8l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       )}

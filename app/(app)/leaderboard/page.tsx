@@ -111,9 +111,9 @@ export default function LeaderboardPage(): React.ReactElement {
           {/* Podium */}
           {members.length >= 3 && (
             <Podium
-              first={top3[0] ? { displayName: top3[0].display_name, totalPoints: top3[0].total_points, isCurrentUser: top3[0].user_id === userId } : null}
-              second={top3[1] ? { displayName: top3[1].display_name, totalPoints: top3[1].total_points, isCurrentUser: top3[1].user_id === userId } : null}
-              third={top3[2] ? { displayName: top3[2].display_name, totalPoints: top3[2].total_points, isCurrentUser: top3[2].user_id === userId } : null}
+              first={top3[0] ? { displayName: top3[0].display_name, avatarUrl: top3[0].avatar_url, totalPoints: top3[0].total_points, isCurrentUser: top3[0].user_id === userId } : null}
+              second={top3[1] ? { displayName: top3[1].display_name, avatarUrl: top3[1].avatar_url, totalPoints: top3[1].total_points, isCurrentUser: top3[1].user_id === userId } : null}
+              third={top3[2] ? { displayName: top3[2].display_name, avatarUrl: top3[2].avatar_url, totalPoints: top3[2].total_points, isCurrentUser: top3[2].user_id === userId } : null}
             />
           )}
 
@@ -127,6 +127,7 @@ export default function LeaderboardPage(): React.ReactElement {
                   key={member.user_id}
                   position={index + 1}
                   displayName={member.display_name}
+                  avatarUrl={member.avatar_url}
                   neighbourhoodName={member.neighbourhood}
                   totalPoints={member.total_points}
                   isCurrentUser={member.user_id === userId}
