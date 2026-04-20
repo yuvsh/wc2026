@@ -80,9 +80,9 @@ users
 
 leagues
   id              uuid PK
-  name            text
+  name            text         -- unique (case-insensitive), enforced by unique index
   invite_code     text UNIQUE  -- 6-char, auto-generated
-  created_by      uuid FK → users
+  created_by      uuid FK → users  -- NULLABLE: null for global league only
   created_at      timestamptz
 
 league_members
@@ -105,6 +105,8 @@ matches
   status          text         -- 'scheduled' | 'live' | 'finished' | 'postponed' | 'cancelled'
   score_a         int          -- null until finished
   score_b         int          -- null until finished
+  prev_score_a    int          -- null unless admin overrode score (stores pre-override value for undo)
+  prev_score_b    int          -- null unless admin overrode score (stores pre-override value for undo)
 
 predictions
   id              uuid PK
@@ -132,7 +134,13 @@ golden_boot_predictions
   created_at      timestamptz
 ```
 
-### 3.3 Design Decisions
+### 3.3 Special Entities
+
+**Global League** — A fixed league with `id = 00000000-0000-0000-0000-000000000001` and `created_by = NULL`. Every new user is auto-joined via a trigger on `public.users`. Provides a site-wide leaderboard with no setup required. Cannot be deleted (the `leagues_delete_own` policy requires `auth.uid() = created_by`, which is never true for null).
+
+**Admin Score Override** — `matches.prev_score_a` / `prev_score_b` enable one-level undo. Before any admin score update, the current values are written to the `prev_*` columns. The undo action swaps them back and clears `prev_*`. These columns are otherwise null.
+
+### 3.4 Design Decisions
 
 - `league_members.total_points` is **denormalized** — updated on every scoring run for fast leaderboard queries without aggregation at read time.
 - `predictions.is_locked` is **set server-side** by an Edge Function at T-5min before kickoff, regardless of client state.
@@ -198,11 +206,35 @@ All tables have RLS enabled. Key policies:
 
 | Table | Policy |
 | :--- | :--- |
-| `leagues` | Read: members only. Write: authenticated users. |
+| `leagues` | Read: members only, OR any authenticated user (for invite-code lookup before joining). Delete: creator only (`created_by = auth.uid()`). Insert: authenticated users. |
 | `league_members` | Read: members of the same league only. |
-| `predictions` | Read: own predictions always. Others' predictions visible only after match is locked. |
+| `predictions` | Read: own predictions always. Others' predictions visible only after match is `finished`/`cancelled`/`postponed`, or if caller also has a locked prediction for the same match. |
 | `golden_boot_predictions` | Read: own only (until tournament ends, then all). |
-| `matches` / `players` | Public read. Write: service role only (Edge Functions). |
+| `matches` / `players` | Public read. Write: service role only (Edge Functions + admin actions). |
+
+### 5.1 SECURITY DEFINER Functions
+
+Some queries need data from tables whose RLS policies block cross-user access (e.g. the `users` table has a "read own row only" policy). These use `SECURITY DEFINER` PostgreSQL functions that run as the DB owner — but always verify caller membership before returning data.
+
+| Function | Purpose | Caller check |
+| :--- | :--- | :--- |
+| `get_league_members(league_id)` | Returns all members of a league with points and display names | Caller must be a member of the league |
+| `get_user_predictions(user_id, league_id)` | Returns a member's predictions for started matches | Caller and target must both be members of the league |
+
+Rules for all SECURITY DEFINER functions:
+- Always set `search_path = ''` to prevent search-path injection
+- Always verify membership inside the function body — never rely on the caller to enforce access
+- Always `GRANT EXECUTE ... TO authenticated` (not `public`)
+
+### 5.2 Admin Access Pattern
+
+The admin page uses a service-role Supabase client (`lib/supabase/admin.ts`) that bypasses RLS entirely. This is only used in Server Actions (`app/actions/admin.ts`).
+
+Admin authorization is enforced at two levels:
+1. **Page level**: Server Component checks `user.email === process.env.ADMIN_EMAIL` and redirects non-admins.
+2. **Action level**: Every Server Action re-verifies the same email check — page-level guards alone are insufficient since actions can be called directly.
+
+`ADMIN_EMAIL` and `SUPABASE_SERVICE_ROLE_KEY` are server-only env vars (no `NEXT_PUBLIC_` prefix).
 
 ---
 
@@ -254,7 +286,69 @@ Additional rules:
 
 ---
 
-## 9. Phase 2 -- Neighbourhood Feature (Data Model)
+## 9. Admin Architecture
+
+### 9.1 Route Structure
+
+Admin pages live in `app/(admin)/` — a dedicated Next.js route group with its own layout. This ensures no user-facing chrome (BottomTabBar, PWA shell) is inherited.
+
+```
+app/
+  (admin)/
+    layout.tsx          — minimal wrapper, plain <main>
+    admin/
+      page.tsx          — server component: auth guard + data fetch
+components/
+  AdminScoreManager.tsx — client component: all interactive UI
+app/actions/
+  admin.ts              — server actions: updateMatchScore, undoMatchScore
+lib/supabase/
+  admin.ts              — service-role client factory (server-only)
+```
+
+### 9.2 Data Flow
+
+```
+User taps Save
+      │
+      ▼
+AdminScoreManager (client)
+  → calls updateMatchScore() server action
+      │
+      ▼
+app/actions/admin.ts
+  1. verifyAdmin() — checks user.email === ADMIN_EMAIL
+  2. Reads current score_a/b → writes to prev_score_a/b
+  3. Writes new score_a/b + status via admin client (bypasses RLS)
+  4. POST /functions/v1/run-scoring { match_id }
+      │
+      ▼
+Supabase run-scoring Edge Function
+  — awards points to all predictions for that match
+  — updates league_members.total_points
+```
+
+### 9.3 Undo Flow
+
+```
+prev_score_a / prev_score_b are non-null
+      │
+User taps Undo
+      │
+      ▼
+undoMatchScore() server action
+  1. verifyAdmin()
+  2. Reads prev_score_a/b
+  3. Writes prev values back to score_a/b
+  4. Clears prev_score_a/b (set to null)
+  5. POST /functions/v1/run-scoring  ← re-runs (idempotent; won't re-score already-scored predictions)
+```
+
+**Known limitation:** If `run-scoring` already fired before undo, the points previously awarded remain. Undo only reverts the displayed score, not historical point awards.
+
+---
+
+## 10. Phase 2 -- Neighbourhood Feature (Data Model)
 
 ### New Table
 

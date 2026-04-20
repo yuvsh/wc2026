@@ -68,7 +68,7 @@ Measurement window: full tournament duration.
 
 ### 4.7 Automated Result Ingestion
 
-There is no admin role in the MVP. All match results and point calculations are handled automatically:
+Match results and point calculations are handled automatically by cron Edge Functions:
 
 - Match results are fetched from a third-party football data API (e.g., API-Football, SportMonks) on a polling schedule.
 - Point calculation triggers automatically once a final result is confirmed by the data source.
@@ -76,6 +76,22 @@ There is no admin role in the MVP. All match results and point calculations are 
 - Postponement and cancellation status are also pulled from the API and handled per Section 6.2.
 
 > **NOTE:** The choice of football data API is a critical pre-development decision. The API must support: live match status, final scores, top scorer standings, and match schedule updates.
+
+### 4.8 Admin Score Management
+
+An admin-only page at `/admin` provides a manual fallback when the API cron fails to update a match result.
+
+**Access:** Protected by admin email check (server-side). Non-admins are silently redirected to `/dashboard`. Access via any device — phone or laptop.
+
+**Capabilities:**
+- **View all matches** — full list of 104 matches with current status, score, and kickoff time. Searchable by team name, filterable by stage.
+- **Manual score update** — set `score_a`, `score_b`, and status (`live` / `finished`) for any match. Automatically triggers the `run-scoring` Edge Function after save, so points are awarded immediately without a separate step.
+- **One-level undo** — every save stores the previous score in `prev_score_a` / `prev_score_b`. The Undo button (visible only when a previous value exists) restores the prior score and re-runs scoring.
+- **Test mode toggle** — by default only `live` and `finished` matches show edit controls. Test mode (red toggle) removes that restriction and allows editing any match regardless of kickoff time. Used during development and staging simulations.
+
+**Limitations:**
+- Undo does not reverse points already awarded by `run-scoring`. Safe workflow: undo while the match is still `live`, before scoring has run. Manual point correction (if needed after scoring has run) must be done directly in the Supabase dashboard.
+- No audit log — one level of undo is sufficient for fixing a cron mistake.
 
 ---
 
@@ -136,6 +152,20 @@ There is no admin role in the MVP. All match results and point calculations are 
 ### Screen 6 – Golden Boot Prediction
 - Searchable/scrollable list of Top 40 players.
 - Locks once the first match kicks off; locked state displays user's selection read-only.
+
+---
+
+### 4.9 League Management (Post-MVP Additions)
+
+Additional league features shipped after MVP:
+
+- **League deletion** — the creator of a league can delete it from their profile. Deletion cascades to all `league_members` rows. The global league (auto-joined by all users) cannot be deleted.
+- **Global league** — all users are automatically members of a shared "כולנו" league with `id = 00000000-0000-0000-0000-000000000001`. Provides a site-wide leaderboard with no setup required.
+- **Unique league names** — case-insensitive unique constraint on league names (excluding the global league). Duplicate names return a clear Hebrew error message at creation time.
+
+### 4.10 View Member Predictions
+
+From any league leaderboard, tapping a member row navigates to a drilldown page showing that member's predictions for all matches that have already started (status: `live`, `finished`, `postponed`, or `cancelled`). Predictions for scheduled matches remain hidden until the match kicks off.
 
 ---
 

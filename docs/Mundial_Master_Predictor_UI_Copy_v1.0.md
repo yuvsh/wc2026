@@ -11,11 +11,14 @@
 
 | מזהה | טקסט | הערות |
 | :--- | :--- | :--- |
-| `login.app_name` | Mundial | שם האפליקציה |
+| `login.app_name` | WC26 | שם האפליקציה (גדול, bold) |
+| `login.credit` | created by Yuval Shahar | כיתוב קטן בתחתית המסך |
 | `login.tagline` | נחש · תחרה · תנצח | טאגליין תחת הלוגו |
 | `login.btn_google` | המשך עם Google | כפתור גוגל |
-| `login.btn_apple` | המשך עם Apple | כפתור אפל |
-| `login.terms` | בהתחברות אתה מסכים ל**תנאי השימוש** ו**מדיניות הפרטיות** | טקסט תחתון |
+| `login.terms` | בהתחברות, אתה מסכים ל | טקסט תחתון |
+| `login.terms_link` | תנאי השימוש | קישור |
+| `login.and` | ו | מפריד |
+| `login.privacy_link` | מדיניות הפרטיות | קישור |
 
 ---
 
@@ -103,12 +106,24 @@
 
 | מזהה | טקסט | הערות |
 | :--- | :--- | :--- |
-| `lb.title` | טבלת דירוג | כותרת |
+| `lb.title` | דירוג | כותרת |
 | `lb.tab_personal` | אישי | טאב |
-| `lb.tab_hood` | שכונות | טאב — פאזה 2 |
+| `lb.tab_hood` | שכונות | טאב — פאזה 2, מסומן "בקרוב" |
+| `lb.coming_soon` | בקרוב | תווית על טאב שכונות |
 | `lb.you` | אתה | שורת המשתמש הנוכחי |
-| `lb.hood_yours` | השכונה שלך · {n} משתתפים | מטא בשורת שכונה |
-| `lb.members` | {n} משתתפים | מטא שכונה |
+| `lb.empty` | הליגה עדיין ריקה — שתף את הקוד! | empty state |
+| `lb.no_leagues` | עדיין לא בליגה? צור אחת ← | empty state — אין ליגות |
+
+### 6.1 דף ניחושי משתמש (drilldown)
+
+| מזהה | טקסט | הערות |
+| :--- | :--- | :--- |
+| `lb.member_back` | חזרה | aria-label כפתור חזרה |
+| `lb.member_back_arrow` | ← | חץ חזרה (RTL) |
+| `lb.member_empty` | עוד לא ניחש כלום | empty state — אין ניחושים לתצוגה |
+| `lb.member_live_badge` | LIVE | badge אדום על ניחוש של משחק חי |
+| `lb.member_fallback_name` | שחקן | fallback אם שם המשתמש לא נמסר ב-URL |
+| `lb.member_aria` | הצג ניחושים של {name} | aria-label על שורת ליגה לחיצה |
 
 ---
 
@@ -163,6 +178,11 @@
 | `profile.section_other` | אחר | כותרת סקשן |
 | `profile.version` | גרסה | תווית |
 | `profile.btn_logout` | התנתק | כפתור אדום |
+| `profile.league_global_label` | כולם בשכונה | תווית מתחת לשם הליגה הגלובלית |
+| `profile.league_delete` | מחק ליגה | כפתור מחיקה — מוצג רק ליוצר הליגה |
+| `profile.league_delete_confirm` | בטוח? | שאלת אישור מחיקה |
+| `profile.league_delete_yes` | כן, מחק | אישור מחיקה |
+| `profile.league_delete_cancel` | ביטול | ביטול מחיקה |
 
 ---
 
@@ -184,7 +204,7 @@
 | :--- | :--- | :--- |
 | `tournament.title` | טורניר | כותרת |
 | `tournament.tab_groups` | בתים | טאב |
-| `tournament.tab_bracket` | סבב פלאיאוף | טאב |
+| `tournament.tab_bracket` | נוקאאוט | טאב |
 | `tournament.col_played` | מ' | עמודה — משחקים |
 | `tournament.col_won` | נ' | עמודה — ניצחונות |
 | `tournament.col_drawn` | ת' | עמודה — תיקו |

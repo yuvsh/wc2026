@@ -79,6 +79,8 @@ create table if not exists matches (
                   )),
   score_a         int,                        -- null until status = 'finished'
   score_b         int,                        -- null until status = 'finished'
+  prev_score_a    int,                        -- stores previous score before admin override (undo support)
+  prev_score_b    int,                        -- stores previous score before admin override (undo support)
   last_synced_at  timestamptz                 -- last time cron updated this row
 );
 
@@ -90,14 +92,21 @@ comment on column matches.score_a is
 -- -----------------------------------------------------------------------------
 -- leagues
 -- Private groups identified by a 6-character invite code.
+-- created_by is nullable to support the global league (which has no creator).
+-- The global league has a fixed id: 00000000-0000-0000-0000-000000000001.
 -- -----------------------------------------------------------------------------
 create table if not exists leagues (
   id          uuid primary key default uuid_generate_v4(),
   name        text        not null,
   invite_code text        not null unique,
-  created_by  uuid        not null references users(id) on delete cascade,
+  created_by  uuid        references users(id) on delete cascade,  -- nullable for global league
   created_at  timestamptz not null default now()
 );
+
+-- Unique league names (case-insensitive), excluding the global league
+create unique index if not exists leagues_name_unique
+  on leagues (lower(trim(name)))
+  where id <> '00000000-0000-0000-0000-000000000001';
 
 -- -----------------------------------------------------------------------------
 -- league_members
@@ -240,6 +249,146 @@ create policy "group_standings_read" on group_standings
   for select using (true);
 
 -- =============================================================================
+-- SECURITY DEFINER FUNCTIONS
+-- =============================================================================
+-- These functions run as the DB owner to bypass RLS for cross-user queries.
+-- Each function verifies caller membership before returning any data.
+
+-- get_league_members: returns all members of a league, ordered by points.
+-- Caller must be a member of the league.
+create or replace function get_league_members(p_league_id uuid)
+returns table (
+  user_id        uuid,
+  total_points   int,
+  display_name   text,
+  neighbourhood  text
+)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not exists (
+    select 1 from public.league_members lm_check
+    where lm_check.league_id = p_league_id
+      and lm_check.user_id = auth.uid()
+  ) then
+    return;
+  end if;
+
+  return query
+  select
+    lm.user_id,
+    lm.total_points,
+    u.display_name,
+    n.name as neighbourhood
+  from public.league_members lm
+  join public.users u on u.id = lm.user_id
+  left join public.neighbourhoods n on n.id = u.neighbourhood_id
+  where lm.league_id = p_league_id
+  order by lm.total_points desc;
+end;
+$$;
+
+grant execute on function get_league_members(uuid) to authenticated;
+
+-- get_user_predictions: returns a league member's predictions for started matches.
+-- Caller and target user must both be members of the specified league.
+-- Only returns matches with status in ('live', 'finished', 'postponed', 'cancelled').
+create or replace function get_user_predictions(p_user_id uuid, p_league_id uuid)
+returns table (
+  match_id       uuid,
+  predicted_a    int,
+  predicted_b    int,
+  points_awarded int,
+  is_locked      bool,
+  team_a         text,
+  team_b         text,
+  team_a_code    text,
+  team_b_code    text,
+  kickoff_at     timestamptz,
+  status         text,
+  score_a        int,
+  score_b        int
+)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not exists (
+    select 1 from public.league_members lm
+    where lm.league_id = p_league_id
+      and lm.user_id = auth.uid()
+  ) then
+    return;
+  end if;
+
+  if not exists (
+    select 1 from public.league_members lm
+    where lm.league_id = p_league_id
+      and lm.user_id = p_user_id
+  ) then
+    return;
+  end if;
+
+  return query
+  select
+    p.match_id,
+    p.predicted_a,
+    p.predicted_b,
+    p.points_awarded,
+    p.is_locked,
+    m.team_a,
+    m.team_b,
+    m.team_a_code,
+    m.team_b_code,
+    m.kickoff_at,
+    m.status::text,
+    m.score_a,
+    m.score_b
+  from public.predictions p
+  join public.matches m on m.id = p.match_id
+  where p.user_id = p_user_id
+    and m.status in ('live', 'finished', 'postponed', 'cancelled')
+  order by m.kickoff_at desc;
+end;
+$$;
+
+grant execute on function get_user_predictions(uuid, uuid) to authenticated;
+
+-- =============================================================================
+-- GLOBAL LEAGUE
+-- =============================================================================
+-- A fixed league that every user auto-joins on account creation.
+-- created_by is NULL (no owner). Cannot be deleted.
+
+insert into leagues (id, name, invite_code, created_by)
+values (
+  '00000000-0000-0000-0000-000000000001',
+  'כולנו',
+  'GLOBAL',
+  null
+) on conflict (id) do nothing;
+
+-- Trigger: auto-join every new user to the global league
+create or replace function join_global_league()
+returns trigger language plpgsql security definer
+set search_path = ''
+as $$
+begin
+  insert into public.league_members (league_id, user_id)
+  values ('00000000-0000-0000-0000-000000000001', new.id)
+  on conflict do nothing;
+  return new;
+end;
+$$;
+
+create or replace trigger on_user_created_join_global
+  after insert on public.users
+  for each row execute procedure join_global_league();
+
+-- =============================================================================
 -- VIEWS
 -- =============================================================================
 
@@ -299,8 +448,16 @@ create policy "leagues_read_member" on leagues
     )
   );
 
+-- leagues: readable by invite code (allows lookup before joining)
+create policy "leagues_read_by_invite_code" on leagues
+  for select using (auth.uid() is not null);
+
 create policy "leagues_insert_authenticated" on leagues
   for insert with check (auth.uid() = created_by);
+
+-- leagues: creator can delete their own leagues (not the global league — created_by = null never matches)
+create policy "leagues_delete_own" on leagues
+  for delete using (auth.uid() = created_by);
 
 -- league_members: readable by members of same league
 create policy "league_members_read" on league_members

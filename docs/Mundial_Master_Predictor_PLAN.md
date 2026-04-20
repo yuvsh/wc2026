@@ -650,6 +650,126 @@ Work through tasks in order. Each task ends with a working, runnable app — not
 
 ---
 
+---
+
+## Task 14 — League Management Improvements
+**Goal:** Leagues are more robust — no duplicate names, creators can delete leagues, and all users share a global league automatically.
+
+### 14.1 Global league
+- Insert global league row: `id = 00000000-0000-0000-0000-000000000001`, `name = 'כולנו'`, `created_by = NULL`
+- Create trigger `on_user_created_join_global` on `public.users` — auto-inserts into `league_members` on every new user
+- Backfill: insert all existing users into global league (`ON CONFLICT DO NOTHING`)
+- Profile page: show global league sublabel "כולנו" without invite code or delete button
+
+### 14.2 Unique league names
+- Create unique index: `leagues_name_unique` on `lower(trim(name))` where `id <> global-league-id`
+- On league creation: catch `error.code === "23505"` and surface Hebrew error: "ליגה עם שם זה כבר קיימת"
+
+### 14.3 League deletion
+- Add migration: `leagues_delete_own` RLS policy — `for delete using (auth.uid() = created_by)`
+- Profile page: show trash icon on leagues the current user created
+- Inline confirm/cancel UI (no modal): tap trash → "בטוח?" with "כן, מחק" + "ביטול"
+- On confirm: call Supabase `.delete()` and remove league from local state via SWR mutate
+
+### 14.4 Invite code lookup RLS fix
+- Add migration: `leagues_read_by_invite_code` policy — `for select using (auth.uid() is not null)`
+- Fixes 406 error when joining league (unauthenticated lookup was previously blocked)
+- Change `.single()` → `.maybeSingle()` in join-league flow to avoid 406 on zero rows
+
+### ✅ Task 14 Checklist
+- [ ] All new users auto-join global league on account creation
+- [ ] Existing users are backfilled into global league
+- [ ] Two leagues with same name (case-insensitive) cannot be created — Hebrew error shown
+- [ ] League creator sees delete button; non-creator does not
+- [ ] Deleting a league removes it from leaderboard and profile for all members
+- [ ] Joining with a valid invite code no longer throws 406
+
+---
+
+## Task 15 — View Member Predictions (Leaderboard Drilldown)
+**Goal:** Tapping any member in a league leaderboard shows their predictions for matches already started.
+
+### 15.1 SECURITY DEFINER function
+- Create migration `get_user_predictions(p_user_id uuid, p_league_id uuid)`
+- Verifies both caller and target are members of the league before returning data
+- Returns predictions joined with match data for matches with status `live`, `finished`, `postponed`, or `cancelled`
+- `GRANT EXECUTE ON FUNCTION get_user_predictions(uuid, uuid) TO authenticated`
+
+### 15.2 Hook
+- Create `hooks/useUserPredictions.ts` — SWR hook wrapping `supabase.rpc("get_user_predictions", ...)`
+- SWR key as array: `["user-predictions", userId, leagueId]`
+- Returns `{ predictions, isLoading, error }`
+- Explicit null coercion for `score_a/score_b` to survive Supabase type-gen non-nullable inference
+
+### 15.3 Leaderboard row update
+- Add `onClick?: () => void` prop to `LeaderboardRow`
+- When `onClick` provided: `role="button"`, `tabIndex={0}`, `onKeyDown` (Enter + Space), `cursor-pointer active:opacity-70 hover:bg-[#F9FAFB]`
+- Chevron SVG with `rtl:rotate-180` to mirror in RTL
+- `aria-label` → `"הצג ניחושים של {displayName}"`
+
+### 15.4 User predictions page
+- Create `app/(app)/leaderboard/[userId]/page.tsx`
+- `leagueId` and `name` passed as search params — if `leagueId` missing, redirect to `/leaderboard`
+- Header: RTL back button (`←`) with 44×44px touch target
+- Date group labels: formatted `he-IL` (e.g. "14 ביוני"), not raw ISO string
+- Live match badge: `"LIVE"` in red, positioned `right-2` (RTL leading edge)
+- Reuses existing `HistoryMatchCard` component
+- Error state and empty state both show `"עוד לא ניחש כלום"`
+
+### ✅ Task 15 Checklist
+- [ ] Tapping any league member navigates to their predictions page
+- [ ] Predictions only show for matches that have started (not scheduled)
+- [ ] Live match shows LIVE badge
+- [ ] Back button returns to leaderboard
+- [ ] Empty state shown when no started predictions exist
+- [ ] Keyboard accessible (Enter/Space on row)
+- [ ] Works in RTL — chevron direction, badge position, back arrow all correct
+
+---
+
+## Task 16 — Admin Score Management Page
+**Goal:** A protected `/admin` page for manually updating match scores when the API cron fails, with test mode and one-level undo.
+
+### 16.1 Migration
+- Add `prev_score_a int` and `prev_score_b int` nullable columns to `matches` table (undo support)
+
+### 16.2 Service-role client
+- Create `lib/supabase/admin.ts` — `createAdminClient()` using `SUPABASE_SERVICE_ROLE_KEY`
+- Server-only — never imported by client components
+
+### 16.3 Server actions
+- Create `app/actions/admin.ts`:
+  - `updateMatchScore(matchId, scoreA, scoreB, status)` — verify admin email, save prev scores, write new scores, trigger `run-scoring`
+  - `undoMatchScore(matchId)` — verify admin email, swap score ↔ prev, clear prev, trigger `run-scoring`
+- Both return `{ ok: boolean; error?: string }`
+- Admin verification runs inside every action (double guard — page level is not sufficient)
+
+### 16.4 Admin layout + page
+- Create `app/(admin)/layout.tsx` — minimal wrapper, no BottomTabBar, no PWA chrome
+- Create `app/(admin)/admin/page.tsx` — Server Component that:
+  - Checks `user.email === process.env.ADMIN_EMAIL`, redirects non-admins to `/dashboard`
+  - Fetches all 104 matches via admin client (bypasses RLS)
+  - Passes matches to `<AdminScoreManager />`
+
+### 16.5 AdminScoreManager component
+- Create `components/AdminScoreManager.tsx` (client component):
+  - Test Mode checkbox (red label) — when off, only `live`/`finished` matches show edit controls; when on, all matches editable
+  - Stage filter + team name search
+  - Collapsible match rows — tap to expand; shows kickoff time, teams, status badge, current score
+  - Expanded row: score_a / score_b inputs, status selector (`scheduled`/`live`/`finished`/`postponed`/`cancelled`), Save button
+  - Undo button visible only when `prev_score_a !== null` — shows previous score in label
+  - Inline success/error feedback; `router.refresh()` after each action
+
+### ✅ Task 16 Checklist
+- [ ] `/admin` redirects non-admin users to `/dashboard`
+- [ ] Admin can view all 104 matches
+- [ ] Admin can update score + status; points are awarded automatically
+- [ ] Undo restores previous score correctly
+- [ ] Test mode allows editing future matches
+- [ ] `ADMIN_EMAIL` and `SUPABASE_SERVICE_ROLE_KEY` documented in env vars
+
+---
+
 ## Important Rules for Claude Code
 
 1. **Never skip a task checklist** — if any item fails, fix it before moving to the next task.

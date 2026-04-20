@@ -42,9 +42,10 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
 API_FOOTBALL_KEY
 NEXT_PUBLIC_APP_ENV          # 'production' | 'staging'
+ADMIN_EMAIL                  # email address of the admin user (no NEXT_PUBLIC_ prefix — server-only)
 ```
 
-> **Important:** `SUPABASE_SERVICE_ROLE_KEY` and `API_FOOTBALL_KEY` are secrets — they must never appear in code or Git.
+> **Important:** `SUPABASE_SERVICE_ROLE_KEY`, `API_FOOTBALL_KEY`, and `ADMIN_EMAIL` are secrets — they must never appear in code or Git. `ADMIN_EMAIL` and `SUPABASE_SERVICE_ROLE_KEY` are consumed only by Server Actions in `app/actions/admin.ts` and must never be prefixed with `NEXT_PUBLIC_`.
 
 ---
 
@@ -257,6 +258,7 @@ All secrets are managed in **GitHub Actions Secrets** and **Vercel Environment V
 | `PROD_SUPABASE_PROJECT_ID` | GitHub | Production |
 | `SUPABASE_SERVICE_ROLE_KEY` | Vercel only | Both |
 | `API_FOOTBALL_KEY` | Vercel only | Both |
+| `ADMIN_EMAIL` | Vercel only | Both |
 | `VERCEL_TOKEN` | GitHub | Both |
 | `VERCEL_ORG_ID` | GitHub | Both |
 | `VERCEL_STAGING_PROJECT_ID` | GitHub | Staging |
