@@ -54,12 +54,13 @@ async function resetAndScore(
   adminClient: ReturnType<typeof createAdminClient>,
   matchId: string
 ): Promise<string | null> {
+  // Reset is best-effort — if the migration hasn't been applied yet this will
+  // fail, but we must still call triggerScoring so predictions get scored.
   const { error: resetError } = await adminClient.rpc("reset_match_scoring", {
     p_match_id: matchId,
   });
   if (resetError) {
     console.error("reset_match_scoring failed:", resetError.message);
-    return `Score reset failed: ${resetError.message}`;
   }
   return triggerScoring(matchId);
 }
