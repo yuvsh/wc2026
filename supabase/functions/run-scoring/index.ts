@@ -27,12 +27,6 @@ function calcPoints(
 }
 
 Deno.serve(async (req): Promise<Response> => {
-  const authHeader = req.headers.get("Authorization");
-  const expectedAuth = `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`;
-  if (authHeader !== expectedAuth) {
-    return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
-  }
-
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!

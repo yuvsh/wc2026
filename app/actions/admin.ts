@@ -25,23 +25,17 @@ async function verifyAdmin(): Promise<{ ok: true; adminClient: ReturnType<typeof
   return { ok: true, adminClient: createAdminClient() };
 }
 
-async function triggerScoring(matchId: string): Promise<string | null> {
+async function triggerScoring(
+  adminClient: ReturnType<typeof createAdminClient>,
+  matchId: string
+): Promise<string | null> {
   try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/run-scoring`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-        },
-        body: JSON.stringify({ match_id: matchId }),
-      }
-    );
-    if (!res.ok) {
-      const body = await res.text();
-      console.error("run-scoring failed:", res.status, body);
-      return `Scoring failed (${res.status}): ${body}`;
+    const { error } = await adminClient.functions.invoke("run-scoring", {
+      body: { match_id: matchId },
+    });
+    if (error) {
+      console.error("run-scoring failed:", error);
+      return `Scoring failed: ${String(error)}`;
     }
     return null;
   } catch (err) {
@@ -62,7 +56,7 @@ async function resetAndScore(
   if (resetError) {
     console.error("reset_match_scoring failed:", resetError.message);
   }
-  return triggerScoring(matchId);
+  return triggerScoring(adminClient, matchId);
 }
 
 export async function updateMatchScore(
