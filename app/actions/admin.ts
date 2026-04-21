@@ -8,6 +8,7 @@ type MatchStatus = "live" | "finished" | "postponed" | "cancelled" | "scheduled"
 interface ActionResult {
   ok: boolean;
   error?: string;
+  scoringError?: string;
 }
 
 const GLOBAL_LEAGUE_ID = "00000000-0000-0000-0000-000000000001";
@@ -24,8 +25,7 @@ async function verifyAdmin(): Promise<{ ok: true; adminClient: ReturnType<typeof
   return { ok: true, adminClient: createAdminClient() };
 }
 
-async function triggerScoring(matchId: string): Promise<void> {
-  // Best-effort — log failures but don't block the action response
+async function triggerScoring(matchId: string): Promise<string | null> {
   try {
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/run-scoring`,
@@ -39,11 +39,29 @@ async function triggerScoring(matchId: string): Promise<void> {
       }
     );
     if (!res.ok) {
-      console.error("run-scoring failed:", res.status, await res.text());
+      const body = await res.text();
+      console.error("run-scoring failed:", res.status, body);
+      return `Scoring failed (${res.status}): ${body}`;
     }
+    return null;
   } catch (err) {
     console.error("run-scoring fetch error:", err);
+    return `Scoring error: ${String(err)}`;
   }
+}
+
+async function resetAndScore(
+  adminClient: ReturnType<typeof createAdminClient>,
+  matchId: string
+): Promise<string | null> {
+  const { error: resetError } = await adminClient.rpc("reset_match_scoring", {
+    p_match_id: matchId,
+  });
+  if (resetError) {
+    console.error("reset_match_scoring failed:", resetError.message);
+    return `Score reset failed: ${resetError.message}`;
+  }
+  return triggerScoring(matchId);
 }
 
 export async function updateMatchScore(
@@ -89,9 +107,11 @@ export async function updateMatchScore(
     return { ok: false, error: updateError.message };
   }
 
-  // Only trigger scoring when match is finished
+  // Reset existing scoring and re-score so corrected results are applied
+  // even if predictions were already scored by the cron.
   if (status === "finished") {
-    await triggerScoring(matchId);
+    const scoringError = await resetAndScore(adminClient, matchId);
+    if (scoringError) return { ok: true, scoringError };
   }
 
   return { ok: true };
@@ -132,8 +152,9 @@ export async function undoMatchScore(matchId: string): Promise<ActionResult> {
     return { ok: false, error: updateError.message };
   }
 
-  // Re-run scoring in case the reverted score changes point outcomes
-  await triggerScoring(matchId);
+  // Reset and re-score with the reverted values
+  const scoringError = await resetAndScore(adminClient, matchId);
+  if (scoringError) return { ok: true, scoringError };
 
   return { ok: true };
 }

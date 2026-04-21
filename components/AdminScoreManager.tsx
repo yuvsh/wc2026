@@ -88,7 +88,8 @@ export default function AdminScoreManager({ matches }: { matches: AdminMatch[] }
       return;
     }
 
-    updateRowState(match.id, { message: "Saved", isError: false });
+    const msg = result.scoringError ? `Saved — scoring error: ${result.scoringError}` : "Saved ✓";
+    updateRowState(match.id, { message: msg, isError: !!result.scoringError });
     startTransition(() => router.refresh());
   }
 
@@ -102,8 +103,9 @@ export default function AdminScoreManager({ matches }: { matches: AdminMatch[] }
       return;
     }
 
+    const undoMsg = result.scoringError ? `Undone — scoring error: ${result.scoringError}` : "Undone ✓";
     updateRowState(match.id, {
-      message: "Undone",
+      message: undoMsg,
       isError: false,
       scoreA: match.prev_score_a?.toString() ?? "",
       scoreB: match.prev_score_b?.toString() ?? "",
