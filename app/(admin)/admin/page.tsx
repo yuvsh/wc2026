@@ -45,27 +45,38 @@ export default async function AdminPage(): Promise<React.ReactElement> {
 
   const adminClient = createAdminClient();
 
-  const [matchesResult, leaguesResult, memberCountsResult, publicUsersResult, authUsersResult] =
-    await Promise.all([
-      adminClient
-        .from("matches")
-        .select("id, team_a, team_b, team_a_code, team_b_code, kickoff_at, stage, status, score_a, score_b, prev_score_a, prev_score_b")
-        .order("kickoff_at", { ascending: false }),
-      adminClient
-        .from("leagues")
-        .select("id, name, invite_code, created_at")
-        .neq("id", GLOBAL_LEAGUE_ID)
-        .order("created_at", { ascending: false }),
-      adminClient
-        .from("league_members")
-        .select("league_id")
-        .neq("league_id", GLOBAL_LEAGUE_ID),
-      adminClient
-        .from("users")
-        .select("id, display_name, provider, created_at")
-        .order("created_at", { ascending: false }),
-      adminClient.auth.admin.listUsers({ perPage: 1000 }),
-    ]);
+  const results = await Promise.all([
+    adminClient
+      .from("matches")
+      .select("id, team_a, team_b, team_a_code, team_b_code, kickoff_at, stage, status, score_a, score_b, prev_score_a, prev_score_b")
+      .order("kickoff_at", { ascending: false }),
+    adminClient
+      .from("leagues")
+      .select("id, name, invite_code, created_at")
+      .neq("id", GLOBAL_LEAGUE_ID)
+      .order("created_at", { ascending: false }),
+    adminClient
+      .from("league_members")
+      .select("league_id")
+      .neq("league_id", GLOBAL_LEAGUE_ID),
+    adminClient
+      .from("users")
+      .select("id, display_name, provider, created_at")
+      .order("created_at", { ascending: false }),
+    adminClient.auth.admin.listUsers({ perPage: 1000 }).catch((err: unknown) => ({ error: String(err), data: null })),
+  ]).catch((err: unknown) => {
+    return { fatalError: String(err) };
+  });
+
+  if ("fatalError" in results) {
+    return (
+      <div className="p-4 text-red-600 font-mono text-sm whitespace-pre-wrap">
+        Admin data fetch failed: {results.fatalError}
+      </div>
+    );
+  }
+
+  const [matchesResult, leaguesResult, memberCountsResult, publicUsersResult, authUsersResult] = results;
 
   if (matchesResult.error) {
     return (
