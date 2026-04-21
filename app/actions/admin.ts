@@ -10,6 +10,8 @@ interface ActionResult {
   error?: string;
 }
 
+const GLOBAL_LEAGUE_ID = "00000000-0000-0000-0000-000000000001";
+
 function isAdminEmail(email: string | undefined): boolean {
   return !!email && email === process.env.ADMIN_EMAIL;
 }
@@ -133,5 +135,41 @@ export async function undoMatchScore(matchId: string): Promise<ActionResult> {
   // Re-run scoring in case the reverted score changes point outcomes
   await triggerScoring(matchId);
 
+  return { ok: true };
+}
+
+export async function deleteLeague(leagueId: string): Promise<ActionResult> {
+  const auth = await verifyAdmin();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  if (leagueId === GLOBAL_LEAGUE_ID) {
+    return { ok: false, error: "Cannot delete the global league" };
+  }
+
+  const { error } = await auth.adminClient.from("leagues").delete().eq("id", leagueId);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function deleteAllLeagues(): Promise<ActionResult> {
+  const auth = await verifyAdmin();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  const { error } = await auth.adminClient
+    .from("leagues")
+    .delete()
+    .neq("id", GLOBAL_LEAGUE_ID);
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function deleteUser(userId: string): Promise<ActionResult> {
+  const auth = await verifyAdmin();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  // Deleting from auth.users cascades to public.users → league_members, predictions, etc.
+  const { error } = await auth.adminClient.auth.admin.deleteUser(userId);
+  if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
