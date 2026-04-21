@@ -36,6 +36,14 @@ export interface AdminUser {
   created_at: string;
 }
 
+function ErrorPage({ message }: { message: string }): React.ReactElement {
+  return (
+    <div className="p-4 text-red-600 font-mono text-sm whitespace-pre-wrap">
+      {message}
+    </div>
+  );
+}
+
 export default async function AdminPage(): Promise<React.ReactElement> {
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -44,11 +52,7 @@ export default async function AdminPage(): Promise<React.ReactElement> {
   }
 
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return (
-      <div className="p-4 text-red-600 font-mono text-sm">
-        SUPABASE_SERVICE_ROLE_KEY is not set in this environment.
-      </div>
-    );
+    return <ErrorPage message="SUPABASE_SERVICE_ROLE_KEY is not set in this environment." />;
   }
 
   const adminClient = createAdminClient();
@@ -77,26 +81,27 @@ export default async function AdminPage(): Promise<React.ReactElement> {
   });
 
   if ("fatalError" in results) {
-    return (
-      <div className="p-4 text-red-600 font-mono text-sm whitespace-pre-wrap">
-        Admin data fetch failed: {results.fatalError}
-      </div>
-    );
+    return <ErrorPage message={`Admin data fetch failed: ${results.fatalError}`} />;
   }
 
   const [matchesResult, leaguesResult, memberCountsResult, publicUsersResult, authUsersResult] = results;
 
   if (matchesResult.error) {
-    return (
-      <div className="text-red-600 font-mono text-sm">
-        Failed to load matches: {matchesResult.error.message}
-      </div>
-    );
+    return <ErrorPage message={`Failed to load matches: ${matchesResult.error.message}`} />;
+  }
+  if (leaguesResult.error) {
+    return <ErrorPage message={`Failed to load leagues: ${leaguesResult.error.message}`} />;
+  }
+  if (memberCountsResult.error) {
+    return <ErrorPage message={`Failed to load member counts: ${memberCountsResult.error.message}`} />;
+  }
+  if (publicUsersResult.error) {
+    return <ErrorPage message={`Failed to load users: ${publicUsersResult.error.message}`} />;
   }
 
   // Build member count map
   const memberCountMap: Record<string, number> = {};
-  for (const row of memberCountsResult.data ?? []) {
+  for (const row of memberCountsResult.data) {
     memberCountMap[row.league_id] = (memberCountMap[row.league_id] ?? 0) + 1;
   }
 
@@ -106,27 +111,36 @@ export default async function AdminPage(): Promise<React.ReactElement> {
     if (u.email) emailMap[u.id] = u.email;
   }
 
-  const leagues: AdminLeague[] = (leaguesResult.data ?? []).map((l) => ({
-    id: l.id as string,
-    name: l.name as string,
-    invite_code: l.invite_code as string,
-    created_at: l.created_at as string,
-    member_count: memberCountMap[l.id as string] ?? 0,
+  const leagues: AdminLeague[] = leaguesResult.data.map((l) => ({
+    id: l.id ?? "",
+    name: l.name ?? "",
+    invite_code: l.invite_code ?? "",
+    created_at: l.created_at ?? "",
+    member_count: memberCountMap[l.id ?? ""] ?? 0,
   }));
 
-  const users: AdminUser[] = (publicUsersResult.data ?? []).map((u) => ({
-    id: u.id as string,
-    display_name: u.display_name as string,
-    provider: u.provider as string,
-    email: emailMap[u.id as string] ?? null,
-    created_at: u.created_at as string,
+  const users: AdminUser[] = publicUsersResult.data.map((u) => ({
+    id: u.id ?? "",
+    display_name: u.display_name ?? "",
+    provider: u.provider ?? "",
+    email: emailMap[u.id ?? ""] ?? null,
+    created_at: u.created_at ?? "",
   }));
 
-  return (
-    <AdminPanel
-      matches={(matchesResult.data ?? []) as AdminMatch[]}
-      leagues={leagues}
-      users={users}
-    />
-  );
+  const matches: AdminMatch[] = matchesResult.data.map((m) => ({
+    id: m.id ?? "",
+    team_a: m.team_a ?? "",
+    team_b: m.team_b ?? "",
+    team_a_code: m.team_a_code ?? "",
+    team_b_code: m.team_b_code ?? "",
+    kickoff_at: m.kickoff_at ?? "",
+    stage: m.stage ?? "",
+    status: m.status ?? "",
+    score_a: m.score_a ?? null,
+    score_b: m.score_b ?? null,
+    prev_score_a: m.prev_score_a ?? null,
+    prev_score_b: m.prev_score_b ?? null,
+  }));
+
+  return <AdminPanel matches={matches} leagues={leagues} users={users} />;
 }

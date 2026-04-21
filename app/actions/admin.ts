@@ -18,6 +18,9 @@ function isAdminEmail(email: string | undefined): boolean {
 }
 
 async function verifyAdmin(): Promise<{ ok: true; adminClient: ReturnType<typeof createAdminClient> } | { ok: false; error: string }> {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return { ok: false, error: "Service role key not configured" };
+  }
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) return { ok: false, error: "Not authenticated" };
@@ -48,13 +51,12 @@ async function resetAndScore(
   adminClient: ReturnType<typeof createAdminClient>,
   matchId: string
 ): Promise<string | null> {
-  // Reset is best-effort — if the migration hasn't been applied yet this will
-  // fail, but we must still call triggerScoring so predictions get scored.
   const { error: resetError } = await adminClient.rpc("reset_match_scoring", {
     p_match_id: matchId,
   });
   if (resetError) {
     console.error("reset_match_scoring failed:", resetError.message);
+    return `Reset failed — existing scores were not cleared, re-scoring was skipped: ${resetError.message}`;
   }
   return triggerScoring(adminClient, matchId);
 }
@@ -65,15 +67,15 @@ export async function updateMatchScore(
   scoreB: number,
   status: MatchStatus
 ): Promise<ActionResult> {
+  // Validate inputs before any DB round-trip
+  if (!Number.isInteger(scoreA) || scoreA < 0 || !Number.isInteger(scoreB) || scoreB < 0) {
+    return { ok: false, error: "Scores must be non-negative integers" };
+  }
+
   const auth = await verifyAdmin();
   if (!auth.ok) return { ok: false, error: auth.error };
 
   const { adminClient } = auth;
-
-  // Validate inputs
-  if (!Number.isInteger(scoreA) || scoreA < 0 || !Number.isInteger(scoreB) || scoreB < 0) {
-    return { ok: false, error: "Scores must be non-negative integers" };
-  }
 
   // Read current scores before overwriting (for undo)
   const { data: current, error: fetchError } = await adminClient

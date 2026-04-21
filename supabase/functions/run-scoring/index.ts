@@ -26,30 +26,51 @@ function calcPoints(
   return MISS_POINTS;
 }
 
+// Decode JWT payload without verifying the signature.
+// Supabase's gateway verifies the JWT before the request reaches this handler.
+// We only need to read the role claim to ensure the caller is service_role.
+function getJwtRole(authHeader: string | null): string | null {
+  try {
+    const token = authHeader?.replace("Bearer ", "") ?? "";
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return typeof payload.role === "string" ? payload.role : null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req): Promise<Response> => {
+  const role = getJwtRole(req.headers.get("Authorization"));
+  if (role !== "service_role") {
+    return new Response(JSON.stringify({ error: "forbidden" }), { status: 403 });
+  }
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
 
-  let body: { match_id?: string };
+  let matchId: string;
   try {
-    body = await req.json();
+    const body: unknown = await req.json();
+    if (
+      typeof body !== "object" ||
+      body === null ||
+      !("match_id" in body) ||
+      typeof (body as Record<string, unknown>).match_id !== "string"
+    ) {
+      return new Response(JSON.stringify({ error: "match_id must be a string" }), { status: 400 });
+    }
+    matchId = (body as Record<string, string>).match_id;
   } catch {
     return new Response(JSON.stringify({ error: "invalid JSON body" }), { status: 400 });
-  }
-
-  const { match_id } = body;
-
-  if (!match_id) {
-    return new Response(JSON.stringify({ error: "match_id required" }), { status: 400 });
   }
 
   // Fetch the finished match
   const { data: match, error: matchError } = await supabase
     .from("matches")
     .select("id, score_a, score_b, status")
-    .eq("id", match_id)
+    .eq("id", matchId)
     .single();
 
   if (matchError || !match) {
@@ -77,7 +98,7 @@ Deno.serve(async (req): Promise<Response> => {
   if (allUsers && allUsers.length > 0) {
     const defaults = allUsers.map((u) => ({
       user_id: u.id,
-      match_id,
+      match_id: matchId,
       predicted_a: 0,
       predicted_b: 0,
       is_locked: true,
@@ -96,7 +117,7 @@ Deno.serve(async (req): Promise<Response> => {
   const { data: predictions, error: predError } = await supabase
     .from("predictions")
     .select("id, user_id, predicted_a, predicted_b")
-    .eq("match_id", match_id)
+    .eq("match_id", matchId)
     .is("points_awarded", null);
 
   if (predError) {
