@@ -43,6 +43,14 @@ export default async function AdminPage(): Promise<React.ReactElement> {
     redirect("/dashboard");
   }
 
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return (
+      <div className="p-4 text-red-600 font-mono text-sm">
+        SUPABASE_SERVICE_ROLE_KEY is not set in this environment.
+      </div>
+    );
+  }
+
   const adminClient = createAdminClient();
 
   const results = await Promise.all([
