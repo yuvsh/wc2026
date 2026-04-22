@@ -208,3 +208,99 @@ test.describe("E2E-LEAGUE-04 / E2E-LEAGUE-05 — join league", () => {
     await expect(page.getByText("קוד לא תקין, נסה שוב")).toBeVisible();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Profile — change neighbourhood (E2E-HOOD-04)
+// ---------------------------------------------------------------------------
+test.describe("E2E-HOOD-04 — change neighbourhood from profile", () => {
+  test.skip(
+    true,
+    "Requires authenticated Supabase session with unlocked neighbourhood — run against staging"
+  );
+
+  test("E2E-HOOD-04: tapping neighbourhood row navigates to neighbourhood selection", async ({
+    page,
+  }) => {
+    await page.goto("/profile");
+
+    // Neighbourhood row should be tappable when hood_locked is false
+    const hoodRow = page.getByText("שכונה").locator("..");
+    await hoodRow.click();
+    await expect(page).toHaveURL(/\/onboarding\/neighbourhood/);
+  });
+
+  test("E2E-HOOD-04: selecting a new neighbourhood updates the profile row value", async ({
+    page,
+  }) => {
+    await page.goto("/onboarding/neighbourhood");
+
+    // Pick the first neighbourhood card
+    const firstCard = page
+      .getByRole("button")
+      .filter({ hasNotText: /המשך|דלג/ })
+      .first();
+    const neighbourhoodName = await firstCard.textContent();
+    await firstCard.click();
+    await page.getByRole("button", { name: "המשך" }).click();
+
+    // Should redirect away from neighbourhood selection
+    await expect(page).not.toHaveURL(/\/onboarding\/neighbourhood/);
+
+    // Navigate to profile and verify the neighbourhood name appears
+    await page.goto("/profile");
+    await expect(page.getByText(neighbourhoodName ?? "")).toBeVisible();
+  });
+
+  test("E2E-HOOD-04: neighbourhood row is disabled and shows locked hint after tournament starts", async ({
+    page,
+  }) => {
+    // Pre-condition: user has hood_locked = true (after first match kicks off)
+    await page.goto("/profile");
+
+    // The neighbourhood row should be non-interactive
+    const lockedLabel = page.getByText("שכונה (נעול)");
+    await expect(lockedLabel).toBeVisible();
+    await expect(
+      page.getByText("לא ניתן לשנות לאחר תחילת הטורניר")
+    ).toBeVisible();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Multi-league membership (E2E-LEAGUE-06)
+// ---------------------------------------------------------------------------
+test.describe("E2E-LEAGUE-06 — user belongs to two leagues", () => {
+  test.skip(
+    true,
+    "Requires authenticated Supabase session with membership in two seeded leagues — run against staging"
+  );
+
+  test("E2E-LEAGUE-06: both league tabs are visible on the leaderboard", async ({
+    page,
+  }) => {
+    // Seed script places the test user in both Test League Alpha and Test League Beta
+    await page.goto("/leaderboard");
+
+    await expect(
+      page.getByRole("button", { name: "Test League Alpha" })
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Test League Beta" })
+    ).toBeVisible();
+  });
+
+  test("E2E-LEAGUE-06: switching tabs shows the correct league members", async ({
+    page,
+  }) => {
+    await page.goto("/leaderboard");
+
+    // Switch to Beta league and verify members update
+    await page.getByRole("button", { name: "Test League Beta" }).click();
+    await page.waitForTimeout(500);
+
+    // Beta tab should be active (teal background)
+    await expect(
+      page.getByRole("button", { name: "Test League Beta" })
+    ).toHaveClass(/bg-\[#0D9488\]/);
+  });
+});

@@ -29,7 +29,7 @@ const COPY = {
   live: "חי",
   lockLabel: "⏱ ננעל בעוד",
   bingo: "⚽ בינגו · 3 נקודות",
-  correct: "✓ כיוון נכון · 1 נקודה",
+  correct: "✓ תוצאה נכונה · 1 נקודה",
   miss: "✗ פספוס · 0 נקודות",
   pending: "מחכים לתוצאה...",
   predictionLabel: (score: string) => `ניחוש שלך: ${score}`,

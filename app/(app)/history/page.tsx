@@ -11,7 +11,7 @@ const COPY = {
   title: "היסטוריה",
   filterAll: "הכל",
   filterBingo: "בינגו",
-  filterCorrect: "ניחוש נכון",
+  filterCorrect: "תוצאה נכונה",
   filterMiss: "פספוס",
   empty: "עדיין אין משחקים שהסתיימו",
 };
@@ -100,7 +100,9 @@ export default function HistoryPage(): React.ReactElement {
         ) : (
           dateKeys.map((dateKey) => (
             <div key={dateKey} className="flex flex-col gap-3">
-              <p className="text-[13px] font-medium text-[#6B7280] text-right">{dateKey}</p>
+              <p className="text-[13px] font-medium text-[#6B7280] text-right">
+                {new Date(dateKey).toLocaleDateString("he-IL", { day: "numeric", month: "long", timeZone: "Asia/Jerusalem" })}
+              </p>
               {groupedMap.get(dateKey)!.map((entry) => (
                 <HistoryMatchCard
                   key={entry.match_id}

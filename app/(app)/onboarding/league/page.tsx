@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { isValidInviteCode } from "@/lib/utils/inviteCode";
@@ -30,7 +30,7 @@ const COPY = {
 
 export default function LeaguePage(): React.ReactElement {
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [displayName, setDisplayName] = useState("");
   const [joinCode, setJoinCode] = useState("");
@@ -40,10 +40,8 @@ export default function LeaguePage(): React.ReactElement {
 
   useEffect(() => {
     async function loadUser(): Promise<void> {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) return;
 
       const { data: profile } = await supabase
         .from("users")
@@ -104,10 +102,8 @@ export default function LeaguePage(): React.ReactElement {
       return;
     }
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) { setJoining(false); return; }
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) { setJoining(false); return; }
 
     // Insert — ignore conflict if already a member
     await supabase
