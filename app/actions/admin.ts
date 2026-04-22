@@ -104,6 +104,9 @@ export async function updateMatchScore(
     return { ok: false, error: updateError.message };
   }
 
+  // Update group standings from the new score (no-op for knockout matches)
+  await adminClient.rpc("recalculate_group_standings_for_match", { p_match_id: matchId });
+
   // Reset existing scoring and re-score so corrected results are applied
   // even if predictions were already scored by the cron.
   if (status === "finished") {
@@ -148,6 +151,9 @@ export async function undoMatchScore(matchId: string): Promise<ActionResult> {
   if (updateError) {
     return { ok: false, error: updateError.message };
   }
+
+  // Update group standings with the reverted score (no-op for knockout matches)
+  await adminClient.rpc("recalculate_group_standings_for_match", { p_match_id: matchId });
 
   // Reset and re-score with the reverted values
   const scoringError = await resetAndScore(adminClient, matchId);
