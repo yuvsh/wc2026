@@ -4,5 +4,6 @@
 -- League names and invite codes are not sensitive: the invite code is already
 -- shared publicly by the league creator when inviting friends.
 
+drop policy if exists "leagues_read_by_invite_code" on leagues;
 create policy "leagues_read_by_invite_code" on leagues
   for select using (auth.uid() is not null);
