@@ -8,6 +8,8 @@ export interface GroupStandingRow {
   won: number;
   drawn: number;
   lost: number;
+  goals_for: number;
+  goals_against: number;
   points: number;
   qualified: boolean;
 }

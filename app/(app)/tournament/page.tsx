@@ -16,7 +16,7 @@ export default async function TournamentPage(): Promise<React.ReactElement> {
   const [standingsResult, matchesResult] = await Promise.all([
     supabase
       .from("group_standings")
-      .select("id, group_name, team_name, team_code, position, played, won, drawn, lost, points, qualified")
+      .select("id, group_name, team_name, team_code, position, played, won, drawn, lost, goals_for, goals_against, points, qualified")
       .order("group_name", { ascending: true })
       .order("position", { ascending: true }),
     supabase
