@@ -105,7 +105,11 @@ export async function updateMatchScore(
   }
 
   // Update group standings from the new score (no-op for knockout matches)
-  await adminClient.rpc("recalculate_group_standings_for_match", { p_match_id: matchId });
+  const { error: standingsError } = await adminClient.rpc("recalculate_group_standings_for_match", { p_match_id: matchId });
+  if (standingsError) {
+    console.error("recalculate_group_standings_for_match failed:", standingsError.message);
+    return { ok: true, scoringError: `Standings update failed: ${standingsError.message}` };
+  }
 
   // Reset existing scoring and re-score so corrected results are applied
   // even if predictions were already scored by the cron.
@@ -153,7 +157,11 @@ export async function undoMatchScore(matchId: string): Promise<ActionResult> {
   }
 
   // Update group standings with the reverted score (no-op for knockout matches)
-  await adminClient.rpc("recalculate_group_standings_for_match", { p_match_id: matchId });
+  const { error: standingsError } = await adminClient.rpc("recalculate_group_standings_for_match", { p_match_id: matchId });
+  if (standingsError) {
+    console.error("recalculate_group_standings_for_match failed:", standingsError.message);
+    return { ok: true, scoringError: `Standings update failed: ${standingsError.message}` };
+  }
 
   // Reset and re-score with the reverted values
   const scoringError = await resetAndScore(adminClient, matchId);
