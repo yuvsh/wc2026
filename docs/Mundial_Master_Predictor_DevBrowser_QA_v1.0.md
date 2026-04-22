@@ -520,6 +520,74 @@ Paste the prompt in the **Prompt** column directly to Claude Code. Claude will u
 
 ---
 
+### QA-ADMIN-09 — Admin page shows error when SUPABASE_SERVICE_ROLE_KEY is missing
+
+**Prompt:**
+> (Staging/local only) Temporarily unset `SUPABASE_SERVICE_ROLE_KEY` from the environment and restart the dev server. Navigate to `/admin` as admin. Take a screenshot. Verify the page renders an error message containing "SUPABASE_SERVICE_ROLE_KEY is not set" instead of crashing with a blank 500 page.
+
+**Pass criteria:**
+- Descriptive error shown on-screen
+- No generic 500 / blank page
+
+---
+
+### QA-ADMIN-10 — Saving a score triggers scoring and awards correct points
+
+**Prompt:**
+> Navigate to `/admin`. Enable Test Mode. Find a finished match where at least one user has made a prediction. Enter the correct score and set status to "finished". Click Save. Wait 3 seconds. Navigate to `/leaderboard`. Verify the user who predicted correctly has non-zero points for that match in `/history`.
+
+**Pass criteria:**
+- Save shows "Saved ✓" with no scoring error
+- User's points increase in the leaderboard
+- History shows the correct points for that match
+
+---
+
+### QA-ADMIN-11 — League manager tab lists non-global leagues
+
+**Prompt:**
+> Navigate to `/admin`. Click the "Leagues" tab. Take a screenshot. Verify: (1) a list of leagues is shown with name, invite code, and member count, (2) the global league ("כולנו") is NOT listed, (3) each league row has a "Delete" button.
+
+**Pass criteria:**
+- Global league absent from list
+- All other leagues shown with correct metadata
+
+---
+
+### QA-ADMIN-12 — League delete requires confirmation
+
+**Prompt:**
+> Navigate to `/admin` → Leagues tab. Click "Delete" on any league. Take a screenshot. Verify a "Sure?" confirmation with "Delete" and "Cancel" buttons appears inline. Click "Cancel". Verify the league is still listed.
+
+**Pass criteria:**
+- Confirmation shown before deletion
+- Cancel aborts deletion
+
+---
+
+### QA-ADMIN-13 — User manager tab lists all users
+
+**Prompt:**
+> Navigate to `/admin`. Click the "Users" tab. Take a screenshot. Verify: (1) a list of users is shown with display name, email, provider, and join date, (2) a search input is visible, (3) each row has a "Remove" button.
+
+**Pass criteria:**
+- All users listed
+- Search input functional (type a name, list filters)
+
+---
+
+### QA-ADMIN-14 — User delete requires confirmation and cascades
+
+**Prompt:**
+> Navigate to `/admin` → Users tab. Click "Remove" on a test user. Take a screenshot. Verify a "Delete user + all data?" confirmation appears. Click "Delete". Verify the user disappears from the list. Navigate to `/leaderboard` and confirm the user is no longer ranked.
+
+**Pass criteria:**
+- Two-step confirmation required
+- User removed from list immediately
+- User absent from leaderboard after deletion
+
+---
+
 ## QA-RTL — RTL Layout & Accessibility
 
 ### QA-RTL-01 — `dir="rtl"` is set on root
@@ -665,6 +733,100 @@ Blockers: (list any FAIL tests that block release)
 ---
 
 ## Run History
+
+### Run 2026-04-20 #2 — Flows Run (dev-browser + Static Code Analysis)
+
+```
+Date: 2026-04-20
+Tester: Claude Sonnet 4.6 (dev-browser live + source code analysis)
+Environment: localhost:3000 (Next.js 16.2.3, Turbopack, confirmed running)
+Branch: main
+Method: dev-browser for unauthenticated routes; source code analysis for auth-gated flows
+```
+
+| Test ID             | Result | Notes |
+| ------------------- | ------ | ----- |
+| FLOW-01 Step 1      | PASS   | Login page renders at `/login`. All 5 elements present: WC26, tagline, button, credit, terms links. `dir="rtl"` `lang="he"` confirmed on html root. |
+| FLOW-01 Step 2      | PASS   | `setLoading(true)` + `setTimeout(resolve, 0)` macrotask before OAuth redirect confirmed. Spinner renders before redirect. `useMemo` wraps `createClient()`. |
+| FLOW-01 Steps 3–8   | SKIP   | Requires real Google OAuth session against live Supabase. |
+| FLOW-02             | SKIP   | Requires two authenticated user sessions and live DB league row. |
+| FLOW-03 Step 1      | PASS   | Unauthenticated request to `/dashboard` redirects to `/login`. |
+| FLOW-03 Steps 2–6   | PASS (code) | `handleSave` uses upsert with `onConflict: "user_id,match_id"`. Toast "הניחוש נשמר ✓". Lock check at T-5min. Optimistic update pattern correct. |
+| FLOW-04 Steps 1,3,4 | PASS (code) | `effectiveLocked = isLocked || timerLocked || status !== "scheduled"`. Save button absent from DOM (not merely disabled) when locked. Inputs `disabled`. |
+| FLOW-04 Step 5      | PASS (code) | `COPY.matchLocked = "המשחק כבר נעול — אי אפשר לשנות"` confirmed. Client check fires before DB call. |
+| FLOW-04 Step 2      | SKIP   | Requires live DB `kickoff_at` update. |
+| FLOW-05 Steps 1–4   | PASS (code) | `updateMatchScore` verifies admin in server action body. `run-scoring` triggered when `status === "finished"`. Realtime `postgres_changes` subscription updates dashboard. |
+| FLOW-06             | PASS (code) | `calcPoints`: exact → 3 (bingo), correct outcome → 1, wrong → 0. Matrix verified: 2-1 actual; pred 2-1 = bingo (3), pred 3-1 = correct (1), pred 0-0 = miss (0). |
+| FLOW-07 Steps 1–6   | PASS (code) | `savedToast = "הבחירה נשמרה ✓"`. Button → "שנה בחירה" after save. Locked: `lockedSubtitle`, amber read-only bar with "נעול" badge, no confirm button. |
+| FLOW-07 (back arrow)| FAIL   | `COPY.back = "→"` in `golden-boot/page.tsx`. Should be `"←"` per QA-RTL-02 spec. See FLOW-FAIL-01. |
+| FLOW-08 Steps 1–5   | PASS (code) | `useUserPredictions` uses `SECURITY DEFINER` RPC. Back arrow `"←"` correct. Member name in header. |
+| FLOW-08 Step 6      | PASS   | Accessing `/leaderboard/[id]` without `leagueId` redirects to `/leaderboard` (confirmed via browser: redirects to `/login` because unauthenticated, which is correct). Guard `if (!leagueId) { router.replace("/leaderboard") }` confirmed in source. |
+| FLOW-09             | PASS (code) | `undoMatchScore`: reads prev values, "Nothing to undo" guard, clears prev columns, always calls `triggerScoring` after undo. |
+| FLOW-09 (admin redirect) | PASS | `/admin` for unauthenticated user redirects to `/login` — confirmed browser. |
+| FLOW-10             | PASS (code) | Delete only for `isOwner`. Confirmation inline with "כן, מחק" (red) and "ביטול". Toast "הליגה נמחקה". RLS `for delete using (auth.uid() = created_by)` confirmed in migration `20260419000004_leagues_delete_policy.sql`. |
+| FLOW-11             | SKIP   | Requires two authenticated sessions. All component logic verified via FLOW-01–10. |
+| FLOW-12             | PASS (code) | Filters: bingo=3, correct=1, miss=0 via `filterByResult`. Stats on unfiltered entries. Empty state "עדיין אין משחקים שהסתיימו". Date labels use `he-IL` toLocaleDateString. |
+| FLOW-13             | PASS (code) | Duplicate name detected via Postgres error code "23505". Error "השם הזה כבר תפוס — נסה שם אחר". Input border turns red. Error clears on input change. |
+| FLOW-14             | PASS (code) | Inline edit mode. Save disabled when `!nameInput.trim()`. Toast "השם עודכן ✓". Cancel restores previous name. |
+| FLOW-15             | PASS (code) | Profile: `navigator.clipboard.writeText`, toast "קוד הועתק ✓". Create-league: button toggles to "הועתק!" for 2s. WhatsApp share URL with correct Hebrew message format. |
+| FLOW-16             | PASS (code) | Neighbourhood row disabled + `opacity-60` when `hood_locked`. Tooltip "הטורניר התחיל — לא ניתן לשנות". Navigates to `/onboarding/neighbourhood?redirect=/profile` when unlocked. |
+
+**Fixes verified from Run #1:**
+
+| Issue ID   | Fix Status | Evidence |
+| ---------- | ---------- | -------- |
+| FAIL-01    | FIXED      | `MatchCard.tsx` and `HistoryMatchCard.tsx` both now have `correct: "✓ תוצאה נכונה · 1 נקודה"` |
+| FAIL-02    | FIXED      | `history/page.tsx` `COPY.filterCorrect = "תוצאה נכונה"` |
+| FAIL-03    | FIXED      | `history/page.tsx` date labels use `new Date(dateKey).toLocaleDateString("he-IL", ...)` not raw string |
+| FAIL-06    | FIXED      | `LeaderboardRow.tsx` `rtl:rotate-180` removed. SVG path draws ‹ natively. |
+| CQ-01      | FIXED      | `league/page.tsx` line 33: `supabase = useMemo(() => createClient(), [])` |
+| CQ-02      | FIXED      | `create-league/page.tsx` line 28: `supabase = useMemo(() => createClient(), [])` |
+| CQ-03      | FIXED      | `league/page.tsx` both `getUser()` calls now destructure `authError` and check `if (authError || !user)` |
+
+**New failures found in this run:**
+
+| Issue ID      | Result | Notes |
+| ------------- | ------ | ----- |
+| FLOW-FAIL-01  | FAIL   | `golden-boot/page.tsx` `COPY.back = "→"` — back button is rightward arrow. Should be `"←"` per RTL spec and QA-RTL-02. Also `create-league/page.tsx` line 140 has hardcoded `→` back arrow. |
+| CQ-10         | FAIL   | `MatchCard.test.tsx` 4 failing unit tests: tests look for `"שמור ניחוש"` but `COPY.btnSave = "שמור"`; tests look for `"ממתין לתוצאה"` but `COPY.pending = "מחכים לתוצאה..."`. Test copy strings are stale. |
+| CQ-11         | FAIL   | `dashboard.spec.ts` (e2e) lines 45, 58, 64: also look for `"שמור ניחוש"` — same stale button label. |
+| QA-GB-05      | FAIL   | `PlayerList.tsx` search is case-sensitive — `p.name.includes(search.trim())` with no `.toLowerCase()`. Typing lowercase (e.g. "messi") does not match "Messi". |
+| CQ-12         | WARN   | `league/page.tsx` `useEffect` deps array is `[]` but closure references `supabase`. Stable `useMemo` ref means no runtime bug, but ESLint exhaustive-deps will warn. |
+| CQ-13         | WARN   | `LeaderboardRow.tsx` line 96: stale comment says "rtl:rotate-180 mirrors it" but the class was removed. Misleading comment should be updated. |
+
+**FAIL-04, FAIL-05 from Run #1 — status:**
+- FAIL-04 (`noMatches` text): still "אין משחקים בקרוב — תחזור אחרי ההגרלה ⚽" — QA spec says "אין משחקים היום". Recommended fix: update QA spec to match implemented copy. Not a regression.
+- FAIL-05 (locked error text + save button behavior): still "המשחק כבר נעול — אי אפשר לשנות". QA spec says different text. Recommended fix: update QA spec. Not a regression.
+
+Overall: **FAIL** (3 real bugs: FLOW-FAIL-01, CQ-10/11, QA-GB-05)
+
+Blockers:
+- CQ-10: Unit tests failing in CI (4 tests in `MatchCard.test.tsx`)
+- CQ-11: E2E tests will fail on dashboard save button label
+
+Non-blockers (should fix before launch):
+- FLOW-FAIL-01: Back arrows inconsistent (`→` in golden-boot and create-league vs `←` in leaderboard)
+- QA-GB-05: Case-sensitive player search — poor UX when typing lowercase
+
+---
+
+**New Tests Added in Run #2:**
+
+**QA-FLOW-GB-BACK — Golden boot back button uses ← not →**
+- Category: RTL / FLOW-07
+- Precondition: Navigate to `/golden-boot`
+- Steps: Observe back button in header. Check `COPY.back` value.
+- Expected: `"←"` (consistent with leaderboard drilldown back arrow)
+- Status: [FAIL] — `COPY.back = "→"` in `golden-boot/page.tsx`
+
+**QA-UNIT-MATCHCARD-SYNC — MatchCard unit tests match current copy strings**
+- Category: Code Quality / Unit Tests
+- Precondition: Source at current state
+- Steps: Run `npx jest tests/unit/MatchCard.test.tsx`
+- Expected: All tests pass
+- Status: [FAIL] — 4 tests fail due to stale `"שמור ניחוש"` and `"ממתין לתוצאה"` strings
+
+---
 
 ### Run 2026-04-20 — Full Regression (Static Code Analysis)
 

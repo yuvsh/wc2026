@@ -300,15 +300,19 @@ Admin pages live in `app/(admin)/` — a dedicated Next.js route group with its 
 ```
 app/
   (admin)/
-    layout.tsx          — minimal wrapper, plain <main>
+    layout.tsx              — minimal wrapper, plain <main>
     admin/
-      page.tsx          — server component: auth guard + data fetch
+      page.tsx              — server component: auth guard + data fetch
 components/
-  AdminScoreManager.tsx — client component: all interactive UI
+  AdminPanel.tsx            — tab switcher (Scores | Leagues | Users)
+  AdminScoreManager.tsx     — client component: match score editor, undo
+  AdminLeagueManager.tsx    — client component: list + delete leagues
+  AdminUserManager.tsx      — client component: list + delete users
 app/actions/
-  admin.ts              — server actions: updateMatchScore, undoMatchScore
+  admin.ts                  — server actions: updateMatchScore, undoMatchScore,
+                              deleteLeague, deleteAllLeagues, deleteUser
 lib/supabase/
-  admin.ts              — service-role client factory (server-only)
+  admin.ts                  — service-role client factory (server-only)
 ```
 
 ### 9.2 Data Flow
@@ -322,15 +326,20 @@ AdminScoreManager (client)
       │
       ▼
 app/actions/admin.ts
-  1. verifyAdmin() — checks user.email === ADMIN_EMAIL
+  1. verifyAdmin() — checks SUPABASE_SERVICE_ROLE_KEY set + user.email === ADMIN_EMAIL
   2. Reads current score_a/b → writes to prev_score_a/b
   3. Writes new score_a/b + status via admin client (bypasses RLS)
-  4. POST /functions/v1/run-scoring { match_id }
+  4. reset_match_scoring(match_id) RPC — subtracts previously awarded points from
+     league_members.total_points, nulls out predictions.points_awarded so the
+     idempotency guard in score_prediction is cleared
+  5. adminClient.functions.invoke("run-scoring", { match_id })
       │
       ▼
 Supabase run-scoring Edge Function
-  — awards points to all predictions for that match
-  — updates league_members.total_points
+  — verifies JWT role claim is "service_role" (403 otherwise)
+  — inserts locked 0-0 default predictions for users who never submitted one
+  — awards points to all unscored predictions for that match
+  — updates league_members.total_points via score_prediction RPC
 ```
 
 ### 9.3 Undo Flow
@@ -346,10 +355,11 @@ undoMatchScore() server action
   2. Reads prev_score_a/b
   3. Writes prev values back to score_a/b
   4. Clears prev_score_a/b (set to null)
-  5. POST /functions/v1/run-scoring  ← re-runs (idempotent; won't re-score already-scored predictions)
+  5. reset_match_scoring(match_id) — clears previously awarded points
+  6. adminClient.functions.invoke("run-scoring") — re-scores with reverted values
 ```
 
-**Known limitation:** If `run-scoring` already fired before undo, the points previously awarded remain. Undo only reverts the displayed score, not historical point awards.
+Undo fully re-scores: `reset_match_scoring` wipes previous point awards before re-scoring, so the undo correctly recalculates points from scratch with the reverted score.
 
 ---
 
