@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -111,6 +112,8 @@ export async function updateMatchScore(
     return { ok: true, scoringError: `Standings update failed: ${standingsError.message}` };
   }
 
+  revalidatePath("/tournament");
+
   // Reset existing scoring and re-score so corrected results are applied
   // even if predictions were already scored by the cron.
   if (status === "finished") {
@@ -162,6 +165,8 @@ export async function undoMatchScore(matchId: string): Promise<ActionResult> {
     console.error("recalculate_group_standings_for_match failed:", standingsError.message);
     return { ok: true, scoringError: `Standings update failed: ${standingsError.message}` };
   }
+
+  revalidatePath("/tournament");
 
   // Reset and re-score with the reverted values
   const scoringError = await resetAndScore(adminClient, matchId);
