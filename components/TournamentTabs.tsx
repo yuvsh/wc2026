@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo, useId } from "react";
+import { createClient } from "@/lib/supabase/client";
 import GroupTable from "@/components/GroupTable";
 import KnockoutBracket from "@/components/KnockoutBracket";
+import { buildGroups } from "@/lib/utils/standings";
 import type { GroupStandingRow, KnockoutMatch } from "@/lib/types/tournament";
 
 interface GroupData {
@@ -33,8 +35,64 @@ const PANEL_IDS: Record<TabType, string> = {
   knockout: "panel-knockout",
 };
 
-export default function TournamentTabs({ groups, knockoutMatches }: TournamentTabsProps): React.ReactElement {
+const GROUP_STANDINGS_SELECT =
+  "id, group_name, team_name, team_code, position, played, won, drawn, lost, goals_for, goals_against, points, qualified";
+
+export default function TournamentTabs({ groups: initialGroups, knockoutMatches }: TournamentTabsProps): React.ReactElement {
   const [tab, setTab] = useState<TabType>("groups");
+  const [groups, setGroups] = useState<GroupData[]>(initialGroups);
+
+  const supabase = useMemo(() => createClient(), []);
+  // useId ensures a unique channel name per component instance,
+  // preventing collision under React 18 Strict Mode double-invoke.
+  // Colons stripped — they are reserved as topic/subtopic delimiters in Phoenix WebSocket.
+  const rawId = useId();
+  const instanceId = rawId.replace(/:/g, "");
+
+  const fetchStandings = useMemo(
+    () => async (): Promise<void> => {
+      try {
+        const { data, error } = await supabase
+          .from("group_standings")
+          .select(GROUP_STANDINGS_SELECT)
+          .order("group_name", { ascending: true })
+          .order("position", { ascending: true });
+
+        if (error) {
+          console.error("[TournamentTabs] standings fetch failed:", error.message);
+          return;
+        }
+        if (data) {
+          setGroups(buildGroups(data as GroupStandingRow[]));
+        }
+      } catch (err) {
+        console.error("[TournamentTabs] standings fetch threw:", err);
+      }
+    },
+    [supabase]
+  );
+
+  // On mount: fetch fresh data regardless of what the Router Cache served.
+  // The server ISR data is the initial state; this corrects any stale data
+  // caused by Next.js client-side Router Cache (30s TTL for static routes).
+  useEffect(() => {
+    void fetchStandings();
+  }, [fetchStandings]);
+
+  // Realtime: keep the view live while the page is open.
+  useEffect(() => {
+    const channel = supabase
+      .channel(`group_standings_live_${instanceId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "group_standings" },
+        () => { void fetchStandings(); }
+      )
+      .subscribe();
+
+    // cleanup cannot be async — void discards the unsubscribe promise intentionally
+    return () => { void supabase.removeChannel(channel); };
+  }, [supabase, instanceId, fetchStandings]);
 
   return (
     <>

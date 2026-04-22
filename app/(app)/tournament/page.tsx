@@ -1,5 +1,6 @@
 import { createPublicClient } from "@/lib/supabase/public";
 import TournamentTabs from "@/components/TournamentTabs";
+import { buildGroups } from "@/lib/utils/standings";
 import type { GroupStandingRow, KnockoutMatch } from "@/lib/types/tournament";
 
 // ISR: revalidate every 60 seconds so Vercel serves a cached page between refreshes.
@@ -49,15 +50,7 @@ export default async function TournamentPage(): Promise<React.ReactElement> {
     (m): m is KnockoutMatch => VALID_STAGES.has(m.stage) && VALID_STATUSES.has(m.status)
   );
 
-  // Build groups array (not Map — Maps aren't JSON-serializable across server/client boundary)
-  const groupMap = new Map<string, GroupStandingRow[]>();
-  for (const row of standings) {
-    if (!groupMap.has(row.group_name)) groupMap.set(row.group_name, []);
-    groupMap.get(row.group_name)!.push(row);
-  }
-  const groups = Array.from(groupMap.keys())
-    .sort()
-    .map((name) => ({ name, rows: groupMap.get(name) ?? [] }));
+  const groups = buildGroups(standings);
 
   return (
     <div className="flex-1 flex flex-col" dir="rtl">
