@@ -1,0 +1,9 @@
+UPDATE neighbourhoods SET icon_url = '/icons/neighbourhoods/01-hamitzpe.svg'        WHERE id = '00000000-0000-0000-0000-000000000001';
+UPDATE neighbourhoods SET icon_url = '/icons/neighbourhoods/07-hashaar.svg'          WHERE id = '00000000-0000-0000-0000-000000000002';
+UPDATE neighbourhoods SET icon_url = '/icons/neighbourhoods/03-pistachio.svg'        WHERE id = '00000000-0000-0000-0000-000000000003';
+UPDATE neighbourhoods SET icon_url = '/icons/neighbourhoods/04-komotayim.svg'        WHERE id = '00000000-0000-0000-0000-000000000004';
+UPDATE neighbourhoods SET icon_url = '/icons/neighbourhoods/05-habrecha.svg'         WHERE id = '00000000-0000-0000-0000-000000000005';
+UPDATE neighbourhoods SET icon_url = '/icons/neighbourhoods/06-chulit.svg'           WHERE id = '00000000-0000-0000-0000-000000000006';
+UPDATE neighbourhoods SET icon_url = '/icons/neighbourhoods/02-hamata.svg'           WHERE id = '00000000-0000-0000-0000-000000000007';
+UPDATE neighbourhoods SET icon_url = '/icons/neighbourhoods/08-hashaar-hachadasha.svg' WHERE id = '00000000-0000-0000-0000-000000000008';
+UPDATE neighbourhoods SET icon_url = '/icons/neighbourhoods/09-hagiva.svg'           WHERE id = '00000000-0000-0000-0000-000000000009';

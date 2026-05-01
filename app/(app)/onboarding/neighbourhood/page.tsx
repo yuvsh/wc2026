@@ -9,6 +9,7 @@ interface Neighbourhood {
   id: string;
   name: string;
   display_order: number;
+  icon_url: string | null;
 }
 
 const COPY = {
@@ -24,24 +25,9 @@ const COPY = {
 // Only allow redirects to known internal paths to prevent open redirect attacks
 const ALLOWED_REDIRECTS = ["/profile", "/onboarding/league"] as const;
 type AllowedRedirect = (typeof ALLOWED_REDIRECTS)[number];
-const ICONS_BY_NEIGHBOURHOOD_ID: Record<string, string> = {
-  "00000000-0000-0000-0000-000000000001": "/icons/neighbourhoods/01-hamitzpe.svg",
-  "00000000-0000-0000-0000-000000000007": "/icons/neighbourhoods/02-hamata.svg",
-  "00000000-0000-0000-0000-000000000003": "/icons/neighbourhoods/03-pistachio.svg",
-  "00000000-0000-0000-0000-000000000004": "/icons/neighbourhoods/04-komotayim.svg",
-  "00000000-0000-0000-0000-000000000005": "/icons/neighbourhoods/05-habrecha.svg",
-  "00000000-0000-0000-0000-000000000006": "/icons/neighbourhoods/06-chulit.svg",
-  "00000000-0000-0000-0000-000000000002": "/icons/neighbourhoods/07-hashaar.svg",
-  "00000000-0000-0000-0000-000000000008": "/icons/neighbourhoods/08-hashaar-hachadasha.svg",
-  "00000000-0000-0000-0000-000000000009": "/icons/neighbourhoods/09-hagiva.svg",
-};
 
 function isSafeRedirect(value: string | null): value is AllowedRedirect {
   return ALLOWED_REDIRECTS.includes(value as AllowedRedirect);
-}
-
-function getNeighbourhoodIconSrc(neighbourhoodId: string): string | null {
-  return ICONS_BY_NEIGHBOURHOOD_ID[neighbourhoodId] ?? null;
 }
 
 export default function NeighbourhoodPage(): React.ReactElement {
@@ -178,9 +164,9 @@ function NeighbourhoodPageContent(): React.ReactElement {
                   : "bg-white border-[#E5E7EB]"
               }`}
             >
-              {getNeighbourhoodIconSrc(hood.id) && (
+              {hood.icon_url && (
                 <Image
-                  src={getNeighbourhoodIconSrc(hood.id)!}
+                  src={hood.icon_url}
                   alt=""
                   width={56}
                   height={56}
