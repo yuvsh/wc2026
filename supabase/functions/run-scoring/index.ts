@@ -69,7 +69,7 @@ Deno.serve(async (req): Promise<Response> => {
   // Fetch the finished match
   const { data: match, error: matchError } = await supabase
     .from("matches")
-    .select("id, score_a, score_b, status")
+    .select("id, score_a, score_b, status, stage")
     .eq("id", matchId)
     .single();
 
@@ -158,8 +158,32 @@ Deno.serve(async (req): Promise<Response> => {
 
   const scoredCount = results.filter((r) => r.status === "fulfilled").length;
 
+  // Recalculate group standings immediately after scoring a group-stage match.
+  // The RPC has its own guard (returns early for non-group or non-finished matches)
+  // but we skip the call entirely for knockout stages to save a round-trip.
+  let standingsError: string | undefined;
+  if (match.stage === "group") {
+    const { error: rpcError } = await supabase.rpc(
+      "recalculate_group_standings_for_match",
+      { p_match_id: matchId }
+    );
+    if (rpcError) standingsError = rpcError.message;
+  }
+
   return new Response(
-    JSON.stringify({ scored: scoredCount, errors: errors.length > 0 ? errors : undefined }),
+    JSON.stringify({
+      scored: scoredCount,
+      standings_updated: match.stage === "group" && !standingsError,
+      errors: [
+        ...(errors.length > 0 ? errors : []),
+        ...(standingsError ? [`standings: ${standingsError}`] : []),
+      ].length > 0
+        ? [
+            ...(errors.length > 0 ? errors : []),
+            ...(standingsError ? [`standings: ${standingsError}`] : []),
+          ]
+        : undefined,
+    }),
     { status: 200, headers: { "Content-Type": "application/json" } }
   );
 });
