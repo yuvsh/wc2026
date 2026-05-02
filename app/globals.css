@@ -13,10 +13,30 @@
   --color-bg: #F8FAFC;
   --color-dark: #111827;
   --color-dark-card: #1F2937;
+
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-lg: 17px;
+  --text-xl: 20px;
+  --text-display: 32px;
 }
 
 body {
   background: var(--color-bg);
   color: var(--color-dark);
   font-family: var(--font-heebo), Arial, sans-serif;
+}
+
+@keyframes bingo-pop {
+  0%   { transform: scale(0.8); opacity: 0.6; }
+  60%  { transform: scale(1.12); opacity: 1; }
+  80%  { transform: scale(0.96); }
+  100% { transform: scale(1.0); }
+}
+
+@layer utilities {
+  .animate-bingo-pop {
+    animation: bingo-pop 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
 }

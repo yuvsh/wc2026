@@ -4,10 +4,8 @@ import { useState, useMemo } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
-
 const COPY = {
-  appName: "WC26",
-  credit: "created by Yuval Shahar",
+  appName: "WC2026",
   tagline: "נחש · תחרה · תנצח",
   btnGoogle: "המשך עם Google",
   terms: "בהתחברות, אתה מסכים ל",
@@ -37,11 +35,20 @@ export default function LoginPage(): React.ReactElement {
   }
 
   return (
-    <main className="relative min-h-screen bg-white flex flex-col items-center justify-center px-6">
-      {/* Top teal accent bar */}
-      <div className="fixed top-0 left-0 right-0 h-1 bg-[#0D9488]" />
+    <main
+      className="relative min-h-screen flex flex-col items-center justify-center px-6 overflow-hidden"
+      style={{ background: "linear-gradient(160deg, #0F172A 0%, #134E4A 60%, #0D9488 100%)" }}
+    >
+      {/* Teal radiance glow behind logo */}
+      <div
+        className="absolute top-0 left-0 right-0 h-64 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(13,148,136,0.25) 0%, transparent 100%)",
+        }}
+      />
 
-      <div className="w-full max-w-sm flex flex-col items-center gap-8">
+      <div className="relative w-full max-w-sm flex flex-col items-center gap-8">
         {/* Logo */}
         <div className="flex flex-col items-center gap-3">
           <Image
@@ -53,10 +60,10 @@ export default function LoginPage(): React.ReactElement {
             priority
           />
           <div className="flex flex-col items-center gap-1">
-            <h1 className="text-[32px] font-black text-[#111827] leading-none tracking-tight">
+            <h1 className="text-[40px] font-black text-white leading-none tracking-tight">
               {COPY.appName}
             </h1>
-            <p className="text-[15px] text-[#6B7280]">{COPY.tagline}</p>
+            <p className="text-[15px] text-[#99F6E4]">{COPY.tagline}</p>
           </div>
         </div>
 
@@ -66,7 +73,7 @@ export default function LoginPage(): React.ReactElement {
             onClick={signInWithGoogle}
             disabled={loading}
             aria-label={COPY.btnGoogle}
-            className="w-full flex items-center justify-center gap-3 h-12 rounded-xl border border-[#D1D5DB] bg-white text-[#111827] text-[15px] font-medium active:opacity-80 transition-opacity disabled:opacity-60"
+            className="w-full flex items-center justify-center gap-3 h-12 rounded-xl border-transparent bg-white text-[#111827] text-[15px] font-medium shadow-lg active:opacity-80 transition-opacity disabled:opacity-60"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-[#D1D5DB] border-t-[#111827] rounded-full animate-spin" />
@@ -77,23 +84,20 @@ export default function LoginPage(): React.ReactElement {
               </>
             )}
           </button>
-
         </div>
 
         {/* Terms */}
-        <p className="text-[13px] text-[#9CA3AF] text-center leading-relaxed">
+        <p className="text-[13px] text-white/60 text-center leading-relaxed">
           {COPY.terms}
-          <a href="/terms" className="font-medium text-[#6B7280] underline">
+          <a href="/terms" className="font-medium text-white/80 underline">
             {COPY.termsLink}
           </a>
           {COPY.and}
-          <a href="/privacy" className="font-medium text-[#6B7280] underline">
+          <a href="/privacy" className="font-medium text-white/80 underline">
             {COPY.privacyLink}
           </a>
         </p>
       </div>
-
-      <p className="absolute bottom-6 text-[12px] text-[#9CA3AF]">{COPY.credit}</p>
     </main>
   );
 }
@@ -108,4 +112,3 @@ function GoogleIcon(): React.ReactElement {
     </svg>
   );
 }
-

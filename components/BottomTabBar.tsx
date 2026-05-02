@@ -129,14 +129,20 @@ export default function BottomTabBar(): React.ReactElement {
           <Link
             key={tab.href}
             href={tab.href}
-            className="flex-1 flex flex-col items-center justify-center h-14 gap-1 px-3"
+            className="flex-1 flex flex-col items-center justify-center h-14"
           >
-            {tab.icon(active)}
-            <span
-              className={`text-[11px] font-medium ${active ? "text-[#0D9488]" : "text-[#6B7280]"}`}
+            <div
+              className={`flex flex-col items-center gap-1 px-3 py-1 rounded-full transition-colors duration-200 ${
+                active ? "bg-[#F0FDFA]" : "bg-transparent"
+              }`}
             >
-              {tab.label}
-            </span>
+              {tab.icon(active)}
+              <span
+                className={`text-[11px] font-medium ${active ? "text-[#0D9488]" : "text-[#6B7280]"}`}
+              >
+                {tab.label}
+              </span>
+            </div>
           </Link>
         );
       })}

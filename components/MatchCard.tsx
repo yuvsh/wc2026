@@ -59,7 +59,9 @@ function PointsBadge({ points }: { points: number | null }): React.ReactElement 
   };
 
   return (
-    <span className={`text-[11px] font-medium px-2 py-1 rounded-full ${styles[type]}`}>
+    <span
+      className={`text-[11px] font-medium px-2 py-1 rounded-full ${styles[type]} ${type === "bingo" ? "animate-bingo-pop" : ""}`}
+    >
       {labels[type]}
     </span>
   );
@@ -87,8 +89,10 @@ function ScoreBox({
 }): React.ReactElement {
   if (finished) {
     return (
-      <div className="w-[44px] h-[44px] rounded-lg bg-[#111827] flex items-center justify-center">
-        <span className="text-white text-[17px] font-bold">{value}</span>
+      <div className="w-[44px] h-[44px] rounded-lg bg-[#0F172A] flex items-center justify-center">
+        <span className="text-white text-[17px] font-bold font-[family-name:var(--font-big-shoulders)]">
+          {value}
+        </span>
       </div>
     );
   }
@@ -102,7 +106,7 @@ function ScoreBox({
       value={value}
       onChange={(e) => onChange?.(e.target.value)}
       disabled={disabled}
-      className="w-[44px] h-[44px] rounded-lg border text-center text-[17px] font-bold outline-none transition-colors
+      className="w-[44px] h-[44px] rounded-lg border text-center text-[17px] font-bold font-[family-name:var(--font-big-shoulders)] outline-none transition-colors
         disabled:bg-[#F3F4F6] disabled:text-[#9CA3AF] disabled:border-[#E5E7EB]
         enabled:border-[#0D9488] enabled:text-[#111827] enabled:bg-white
         focus:ring-2 focus:ring-[#0D9488] focus:ring-opacity-30"
@@ -138,13 +142,13 @@ export default function MatchCard({
   const pointsType = getPointsType(pointsAwarded);
   const borderAccent =
     pointsType === "bingo"
-      ? "border-r-4 border-r-[#EF9F27]"
+      ? "border-s-4 border-s-[#EF9F27]"
       : pointsType === "correct"
-      ? "border-r-4 border-r-[#22C55E]"
+      ? "border-s-4 border-s-[#22C55E]"
       : pointsType === "miss"
-      ? "border-r-4 border-r-[#6B7280]"
+      ? "border-s-4 border-s-[#6B7280]"
       : isLive
-      ? "border-r-4 border-r-[#DC2626]"
+      ? "border-s-4 border-s-[#DC2626]"
       : "";
 
   async function handleSave(): Promise<void> {
@@ -157,12 +161,12 @@ export default function MatchCard({
   }
 
   return (
-    <div className={`bg-white rounded-xl border border-[#E5E7EB] p-4 ${borderAccent}`}>
+    <div className={`bg-white rounded-xl border border-[#E5E7EB] p-4 shadow-md ${borderAccent}`}>
       {/* Teams + scores row */}
       <div className="flex items-center justify-between gap-3">
         {/* Team A (right in RTL) */}
-        <div className="flex items-center gap-2 flex-1 justify-end">
-          <span className="text-[15px] font-medium text-[#111827]">{teamA}</span>
+        <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+          <span className="text-[15px] font-medium text-[#111827] truncate">{teamA}</span>
           <FlagIcon code={teamACode} />
         </div>
 
@@ -184,9 +188,9 @@ export default function MatchCard({
         </div>
 
         {/* Team B (left in RTL) */}
-        <div className="flex items-center gap-2 flex-1 justify-start">
+        <div className="flex items-center gap-2 flex-1 justify-start min-w-0">
           <FlagIcon code={teamBCode} />
-          <span className="text-[15px] font-medium text-[#111827]">{teamB}</span>
+          <span className="text-[15px] font-medium text-[#111827] truncate">{teamB}</span>
         </div>
       </div>
 
@@ -224,8 +228,8 @@ export default function MatchCard({
         ) : (
           <>
             <span
-              className={`text-[13px] tabular-nums font-medium ${
-                isUnderOneHour ? "text-[#0D9488]" : "text-[#6B7280]"
+              className={`text-[13px] tabular-nums ${isUnderOneHour ? "font-bold" : "font-medium"} ${
+                isUnderOneHour ? "text-[#0D9488] motion-safe:animate-pulse" : "text-[#6B7280]"
               }`}
             >
               {COPY.lockLabel} {timerDisplay}

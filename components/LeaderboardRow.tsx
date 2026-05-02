@@ -20,7 +20,9 @@ function PositionLabel({ position }: { position: number }): React.ReactElement {
     position === 1 ? gold : position === 2 ? silver : position === 3 ? bronze : normal;
 
   return (
-    <span className={`text-[13px] w-5 text-center tabular-nums shrink-0 ${cls}`}>
+    <span
+      className={`text-[15px] w-5 text-center tabular-nums shrink-0 font-[family-name:var(--font-big-shoulders)] ${cls}`}
+    >
       {position}
     </span>
   );
@@ -108,7 +110,7 @@ export default function LeaderboardRow({
       {/* 4. Points — visually prominent, left side in RTL */}
       <div className="shrink-0 text-left flex flex-col items-center">
         <span
-          className={`text-[17px] font-bold tabular-nums leading-none ${
+          className={`text-[20px] font-bold tabular-nums leading-none font-[family-name:var(--font-big-shoulders)] ${
             isCurrentUser ? "text-[#0D9488]" : "text-[#111827]"
           }`}
         >

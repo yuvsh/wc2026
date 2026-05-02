@@ -247,9 +247,12 @@ export default function DashboardPage(): React.ReactElement {
           <>
             {dateKeys.map((dateKey) => (
               <div key={dateKey} className="flex flex-col gap-3">
-                <p className="text-[13px] font-medium text-[#6B7280] text-right">
-                  {formatDateLabel(dateKey)}
-                </p>
+                <div className="flex items-center gap-3 mb-1">
+                  <span className="text-[13px] font-semibold text-[#6B7280] tracking-wide shrink-0">
+                    {formatDateLabel(dateKey)}
+                  </span>
+                  <div className="flex-1 h-px bg-[#E5E7EB]" />
+                </div>
                 {grouped.get(dateKey)!.map((match) => {
                   const prediction = predictions.get(match.id) ?? null;
                   return (

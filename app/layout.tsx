@@ -1,11 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Heebo } from "next/font/google";
+import { Heebo, Big_Shoulders } from "next/font/google";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import "./globals.css";
 
 const heebo = Heebo({
   variable: "--font-heebo",
   subsets: ["latin", "hebrew"],
+});
+
+const bigShoulders = Big_Shoulders({
+  variable: "--font-big-shoulders",
+  subsets: ["latin"],
+  weight: ["700", "900"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -37,7 +44,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>): React.ReactElement {
   return (
-    <html lang="he" dir="rtl" className={`${heebo.variable} h-full`}>
+    <html lang="he" dir="rtl" className={`${heebo.variable} ${bigShoulders.variable} h-full`}>
       {/* pt-[env(safe-area-inset-top)] prevents content from sliding under the
           iOS translucent status bar when the app is installed as a PWA */}
       <body className="min-h-full flex flex-col pt-[env(safe-area-inset-top)]">
